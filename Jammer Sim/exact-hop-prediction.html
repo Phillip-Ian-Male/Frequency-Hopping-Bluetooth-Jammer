@@ -1,0 +1,1214 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Exact-Hop Prediction Pretraining Simulator</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7f4;
+      --surface: #ffffff;
+      --surface-2: #edf2ee;
+      --ink: #17211d;
+      --muted: #60706a;
+      --border: #d7dfda;
+      --grid: #e7ece8;
+      --green: #168067;
+      --teal: #0f766e;
+      --blue: #315f9d;
+      --violet: #6d5fb3;
+      --amber: #b46b12;
+      --red: #b84035;
+      --shadow: 0 16px 42px rgba(23, 33, 29, 0.08);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      width: min(1540px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 22px 0 30px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 0 2px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.4rem, 2vw, 2.32rem);
+      line-height: 1.05;
+      letter-spacing: 0;
+      font-weight: 780;
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.96rem;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 38px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      color: var(--muted);
+      white-space: nowrap;
+      font-weight: 680;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(292px, 360px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+      margin-top: 18px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .controls {
+      position: sticky;
+      top: 14px;
+      padding: 14px;
+    }
+
+    .control-group {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .control-group:first-child {
+      padding-top: 0;
+    }
+
+    .control-group:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .group-title {
+      margin-bottom: 10px;
+      color: var(--ink);
+      font-size: 0.78rem;
+      font-weight: 780;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      margin: 12px 0;
+    }
+
+    .field:first-of-type {
+      margin-top: 0;
+    }
+
+    .label-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    output {
+      color: var(--ink);
+      font-weight: 720;
+      white-space: nowrap;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--green);
+    }
+
+    select,
+    input[type="number"] {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: #fbfcfb;
+      color: var(--ink);
+      padding: 7px 9px;
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .run-button,
+    .ghost-button {
+      min-height: 42px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-weight: 760;
+    }
+
+    .run-button {
+      background: var(--green);
+      color: #fff;
+      padding: 0 14px;
+    }
+
+    .ghost-button {
+      width: 44px;
+      background: var(--surface-2);
+      border-color: var(--border);
+      color: var(--ink);
+    }
+
+    .main {
+      display: grid;
+      gap: 18px;
+      min-width: 0;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric {
+      min-height: 112px;
+      padding: 15px;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 720;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .metric-value {
+      margin-top: 10px;
+      font-size: clamp(1.38rem, 2.2vw, 2.18rem);
+      line-height: 1;
+      font-weight: 820;
+      letter-spacing: 0;
+    }
+
+    .metric-sub {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.35;
+    }
+
+    .verdict {
+      padding: 13px 15px;
+      border-left: 5px solid var(--green);
+      color: var(--ink);
+      line-height: 1.45;
+    }
+
+    .verdict.warn {
+      border-left-color: var(--amber);
+    }
+
+    .verdict.fail {
+      border-left-color: var(--red);
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.16fr) minmax(360px, 0.84fr);
+      gap: 18px;
+    }
+
+    .chart-panel {
+      padding: 14px;
+      min-width: 0;
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 780;
+      letter-spacing: 0;
+    }
+
+    .panel-meta {
+      color: var(--muted);
+      font-size: 0.84rem;
+      white-space: nowrap;
+    }
+
+    canvas {
+      width: 100%;
+      display: block;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fbfcfb;
+    }
+
+    #posteriorChart,
+    #predictionChart {
+      height: 390px;
+    }
+
+    .table-panel {
+      overflow: hidden;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+      font-size: 0.91rem;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      background: var(--surface-2);
+      color: var(--muted);
+      text-align: left;
+      font-size: 0.76rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tbody td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    tbody tr.pass {
+      background: #dff3ed;
+    }
+
+    .algo-name {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      font-weight: 760;
+      white-space: nowrap;
+    }
+
+    .swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      flex: 0 0 auto;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 62px;
+      min-height: 25px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 780;
+    }
+
+    .badge.pass {
+      color: #0f5f4d;
+      background: #c9eadf;
+    }
+
+    .badge.miss {
+      color: #7d342d;
+      background: #f4d8d5;
+    }
+
+    .bar-track {
+      width: min(210px, 24vw);
+      height: 9px;
+      border-radius: 999px;
+      background: #e7ece8;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--green);
+    }
+
+    .footer-note {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.45;
+      padding: 0 2px;
+    }
+
+    @media (max-width: 1120px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        position: static;
+      }
+
+      .summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .chart-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .app {
+        width: min(100vw - 18px, 1540px);
+        padding-top: 12px;
+      }
+
+      .topbar,
+      .panel-head {
+        display: grid;
+      }
+
+      .summary {
+        grid-template-columns: 1fr;
+      }
+
+      .status-pill {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <h1>Exact-Hop Prediction Pretraining Simulator</h1>
+        <div class="subtitle">Active system identification before deployment, then one-bin prediction over a 79-channel hop space</div>
+      </div>
+      <div class="status-pill" aria-live="polite"><span class="dot"></span><span id="runStatus">Ready</span></div>
+    </header>
+
+    <div class="layout">
+      <aside class="panel controls" aria-label="Simulation controls">
+        <div class="control-group">
+          <div class="group-title">Target Hop Kernel</div>
+          <label class="field">
+            <span class="label-row"><span>Hidden sequence family</span></span>
+            <select id="family">
+              <option value="affine" selected>Finite-state affine kernel</option>
+              <option value="permuted">Permuted finite-state kernel</option>
+              <option value="afhAffine">Affine kernel with AFH remap</option>
+              <option value="chaotic">Unmodelled stochastic drift</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Active bins</span><output id="activeBinsOut">32</output></span>
+            <input id="activeBins" type="range" min="10" max="79" step="1" value="32">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Deployment drift</span><output id="driftOut">0%</output></span>
+            <input id="driftPct" type="range" min="0" max="12" step="1" value="0">
+          </label>
+        </div>
+
+        <div class="control-group">
+          <div class="group-title">Pretraining Feedback</div>
+          <label class="field">
+            <span class="label-row"><span>Pretraining observations</span><output id="pretrainOut">400</output></span>
+            <input id="pretrainSlots" type="range" min="20" max="1800" step="20" value="400">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Feedback probability</span><output id="feedbackOut">100%</output></span>
+            <input id="feedbackProb" type="range" min="20" max="100" step="1" value="100">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Wrong feedback</span><output id="wrongOut">0%</output></span>
+            <input id="wrongProb" type="range" min="0" max="20" step="1" value="0">
+          </label>
+        </div>
+
+        <div class="control-group">
+          <div class="group-title">Deployment</div>
+          <label class="field">
+            <span class="label-row"><span>Prediction horizon</span><output id="horizonOut">2 slots</output></span>
+            <input id="horizon" type="range" min="1" max="12" step="1" value="2">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Jamming width</span><output id="jamWidthOut">1 MHz</output></span>
+            <input id="jamWidth" type="range" min="1" max="10" step="1" value="1">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Packets</span><output id="packetOut">12800</output></span>
+            <input id="packets" type="range" min="1600" max="48000" step="1600" value="12800">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Seed</span></span>
+            <input id="seed" type="number" min="1" max="999999" step="1" value="91011">
+          </label>
+          <div class="button-row">
+            <button id="runBtn" class="run-button" type="button">Run exact-hop test</button>
+            <button id="resetBtn" class="ghost-button" type="button" title="Reset defaults" aria-label="Reset defaults">R</button>
+          </div>
+        </div>
+      </aside>
+
+      <section class="main">
+        <section class="summary" aria-label="Summary">
+          <div class="panel metric">
+            <div class="metric-label">Exact predictor</div>
+            <div id="exactMetric" class="metric-value">-</div>
+            <div id="exactSub" class="metric-sub">-</div>
+          </div>
+          <div class="panel metric">
+            <div class="metric-label">Posterior collapse</div>
+            <div id="posteriorMetric" class="metric-value">-</div>
+            <div id="posteriorSub" class="metric-sub">-</div>
+          </div>
+          <div class="panel metric">
+            <div class="metric-label">One-bin ceiling</div>
+            <div id="ceilingMetric" class="metric-value">-</div>
+            <div id="ceilingSub" class="metric-sub">-</div>
+          </div>
+          <div class="panel metric">
+            <div class="metric-label">Best fallback</div>
+            <div id="fallbackMetric" class="metric-value">-</div>
+            <div id="fallbackSub" class="metric-sub">-</div>
+          </div>
+        </section>
+
+        <div id="verdict" class="panel verdict">Run a scenario to test whether active pretraining identifies the hidden hop generator.</div>
+
+        <section class="chart-grid">
+          <div class="panel chart-panel">
+            <div class="panel-head">
+              <h2 class="panel-title">Pretraining Identification</h2>
+              <div class="panel-meta">Remaining candidates after feedback</div>
+            </div>
+            <canvas id="posteriorChart" width="940" height="430" aria-label="Posterior collapse chart"></canvas>
+          </div>
+          <div class="panel chart-panel">
+            <div class="panel-head">
+              <h2 class="panel-title">Deployment Trace</h2>
+              <div id="traceMeta" class="panel-meta">Actual hops and exact predictions</div>
+            </div>
+            <canvas id="predictionChart" width="620" height="430" aria-label="Prediction trace chart"></canvas>
+          </div>
+        </section>
+
+        <section class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Predictor</th>
+                  <th>Disrupted</th>
+                  <th>Exact hits</th>
+                  <th>Width</th>
+                  <th>Goal</th>
+                  <th>Compute class</th>
+                  <th>Interpretation</th>
+                </tr>
+              </thead>
+              <tbody id="resultsBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="footer-note">
+          This is a simulation of the theoretical ceiling, not a practical over-the-air recipe. Exact prediction becomes possible only when the hidden generator is inside the model class and active feedback identifies its state before deployment.
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    "use strict";
+
+    const CHANNELS = 79;
+    const FIRST_MHZ = 2402;
+    const TARGET = 0.36;
+    const PRIME = 79;
+
+    const COLORS = {
+      exact: "#168067",
+      bayes: "#315f9d",
+      ngram: "#6d5fb3",
+      map: "#b46b12",
+      random: "#747b84",
+      red: "#b84035"
+    };
+
+    const els = {
+      family: document.getElementById("family"),
+      activeBins: document.getElementById("activeBins"),
+      driftPct: document.getElementById("driftPct"),
+      pretrainSlots: document.getElementById("pretrainSlots"),
+      feedbackProb: document.getElementById("feedbackProb"),
+      wrongProb: document.getElementById("wrongProb"),
+      horizon: document.getElementById("horizon"),
+      jamWidth: document.getElementById("jamWidth"),
+      packets: document.getElementById("packets"),
+      seed: document.getElementById("seed"),
+      runBtn: document.getElementById("runBtn"),
+      resetBtn: document.getElementById("resetBtn"),
+      activeBinsOut: document.getElementById("activeBinsOut"),
+      driftOut: document.getElementById("driftOut"),
+      pretrainOut: document.getElementById("pretrainOut"),
+      feedbackOut: document.getElementById("feedbackOut"),
+      wrongOut: document.getElementById("wrongOut"),
+      horizonOut: document.getElementById("horizonOut"),
+      jamWidthOut: document.getElementById("jamWidthOut"),
+      packetOut: document.getElementById("packetOut"),
+      runStatus: document.getElementById("runStatus"),
+      exactMetric: document.getElementById("exactMetric"),
+      exactSub: document.getElementById("exactSub"),
+      posteriorMetric: document.getElementById("posteriorMetric"),
+      posteriorSub: document.getElementById("posteriorSub"),
+      ceilingMetric: document.getElementById("ceilingMetric"),
+      ceilingSub: document.getElementById("ceilingSub"),
+      fallbackMetric: document.getElementById("fallbackMetric"),
+      fallbackSub: document.getElementById("fallbackSub"),
+      verdict: document.getElementById("verdict"),
+      resultsBody: document.getElementById("resultsBody"),
+      posteriorChart: document.getElementById("posteriorChart"),
+      predictionChart: document.getElementById("predictionChart"),
+      traceMeta: document.getElementById("traceMeta")
+    };
+
+    let latest = null;
+
+    function mulberry32(seed) {
+      let t = seed >>> 0;
+      return function next() {
+        t += 0x6D2B79F5;
+        let r = Math.imul(t ^ (t >>> 15), 1 | t);
+        r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+        return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function mod(value, base) {
+      return ((value % base) + base) % base;
+    }
+
+    function fmtInt(value) {
+      return Math.round(value).toLocaleString("en-US");
+    }
+
+    function fmtPct(value) {
+      return `${(value * 100).toFixed(1)}%`;
+    }
+
+    function hitWindow(channel, center, width) {
+      const start = clamp(Math.round(center - (width - 1) / 2), 0, CHANNELS - width);
+      return channel >= start && channel < start + width;
+    }
+
+    function parseParams() {
+      return {
+        family: els.family.value,
+        activeBins: Number(els.activeBins.value),
+        driftPct: Number(els.driftPct.value),
+        pretrainSlots: Number(els.pretrainSlots.value),
+        feedbackProb: Number(els.feedbackProb.value),
+        wrongProb: Number(els.wrongProb.value),
+        horizon: Number(els.horizon.value),
+        jamWidth: Number(els.jamWidth.value),
+        packets: Number(els.packets.value),
+        seed: clamp(Number(els.seed.value) || 1, 1, 999999)
+      };
+    }
+
+    function syncControls() {
+      els.activeBinsOut.textContent = els.activeBins.value;
+      els.driftOut.textContent = `${els.driftPct.value}%`;
+      els.pretrainOut.textContent = Number(els.pretrainSlots.value).toLocaleString("en-US");
+      els.feedbackOut.textContent = `${els.feedbackProb.value}%`;
+      els.wrongOut.textContent = `${els.wrongProb.value}%`;
+      els.horizonOut.textContent = `${els.horizon.value} slot${els.horizon.value === "1" ? "" : "s"}`;
+      els.jamWidthOut.textContent = `${els.jamWidth.value} MHz`;
+      els.packetOut.textContent = Number(els.packets.value).toLocaleString("en-US");
+    }
+
+    function makePermutation(seed) {
+      const rng = mulberry32(seed);
+      const values = Array.from({ length: CHANNELS }, (_, i) => i);
+      for (let i = values.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [values[i], values[j]] = [values[j], values[i]];
+      }
+      return values;
+    }
+
+    function makeActiveMap(params, seed) {
+      const rng = mulberry32(seed);
+      const bins = Array.from({ length: CHANNELS }, (_, i) => i);
+      for (let i = bins.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [bins[i], bins[j]] = [bins[j], bins[i]];
+      }
+      const active = bins.slice(0, params.activeBins).sort((a, b) => a - b);
+      const used = new Uint8Array(CHANNELS);
+      for (const ch of active) used[ch] = 1;
+      return { active, used };
+    }
+
+    function remapToActive(raw, active) {
+      return active[mod(raw, active.length)];
+    }
+
+    function channelFromCandidate(c, t, params, active, perm) {
+      let raw = mod(c.phase + c.stride * t + c.curve * t * t, PRIME);
+      if (params.family === "permuted") raw = perm[raw];
+      if (params.family === "afhAffine") raw = remapToActive(raw, active);
+      return raw;
+    }
+
+    function buildCandidateSpace(params) {
+      const candidates = [];
+      for (let phase = 0; phase < CHANNELS; phase++) {
+        for (let stride = 1; stride < CHANNELS; stride++) {
+          for (let curve = 0; curve < 5; curve++) {
+            candidates.push({ phase, stride, curve, weight: 1 });
+          }
+        }
+      }
+      return candidates;
+    }
+
+    function chooseTruth(params) {
+      const rng = mulberry32(params.seed * 2654435761 + 17);
+      return {
+        phase: Math.floor(rng() * CHANNELS),
+        stride: 1 + Math.floor(rng() * (CHANNELS - 1)),
+        curve: params.family === "affine" ? 0 : Math.floor(rng() * 5),
+        weight: 1
+      };
+    }
+
+    function generateSequence(params) {
+      const truth = chooseTruth(params);
+      const activeData = makeActiveMap(params, params.seed * 104729 + 31);
+      const perm = makePermutation(params.seed * 8191 + 43);
+      const rng = mulberry32(params.seed * 65537 + 7);
+      const total = params.pretrainSlots + params.horizon + params.packets + 20;
+      const hops = new Int16Array(total);
+
+      for (let t = 0; t < total; t++) {
+        let ch = channelFromCandidate(truth, t, params, activeData.active, perm);
+        const stochastic = params.family === "chaotic" ? 0.08 : 0;
+        const drift = params.driftPct / 100;
+        if (t >= params.pretrainSlots && rng() < drift + stochastic) {
+          ch = Math.floor(rng() * CHANNELS);
+        }
+        hops[t] = ch;
+      }
+
+      return { truth, active: activeData.active, used: activeData.used, perm, hops };
+    }
+
+    function makeFeedback(params, data) {
+      const rng = mulberry32(params.seed * 31337 + 101);
+      const feedback = new Int16Array(params.pretrainSlots);
+      feedback.fill(-1);
+
+      for (let t = 0; t < params.pretrainSlots; t++) {
+        if (rng() > params.feedbackProb / 100) continue;
+        let obs = data.hops[t];
+        if (rng() < params.wrongProb / 100) {
+          obs = mod(obs + 1 + Math.floor(rng() * (CHANNELS - 1)), CHANNELS);
+        }
+        feedback[t] = obs;
+      }
+      return feedback;
+    }
+
+    function trainPosterior(params, data, feedback) {
+      const candidates = buildCandidateSpace(params);
+      const counts = [];
+      let live = candidates.length;
+
+      for (let t = 0; t < feedback.length; t++) {
+        const obs = feedback[t];
+        if (obs < 0) {
+          counts.push(live);
+          continue;
+        }
+        live = 0;
+        for (const c of candidates) {
+          if (c.weight <= 0) continue;
+          const predicted = channelFromCandidate(c, t, params, data.active, data.perm);
+          if (predicted === obs) {
+            c.weight *= 1.04;
+            live += 1;
+          } else {
+            c.weight *= params.wrongProb > 0 ? 0.04 : 0;
+            if (c.weight > 0.000001) live += 1;
+          }
+        }
+        counts.push(live);
+      }
+
+      candidates.sort((a, b) => b.weight - a.weight);
+      const totalWeight = candidates.reduce((sum, c) => sum + c.weight, 0);
+      const best = candidates[0];
+      const confidence = totalWeight > 0 ? best.weight / totalWeight : 0;
+      const remaining = candidates.filter(c => c.weight > 0.000001).length;
+      return { candidates, best, confidence, remaining, counts };
+    }
+
+    function makeExactPredictor(model) {
+      return {
+        name: "Bayesian Exact-State Predictor",
+        id: "exact",
+        color: COLORS.exact,
+        compute: "Infinite/offline",
+        note: "Identifies the hidden finite-state hop kernel, then predicts the requested future slot.",
+        predict(t, params, data) {
+          return channelFromCandidate(model.best, t, params, data.active, data.perm);
+        }
+      };
+    }
+
+    function makeMajorityPosterior(model) {
+      return {
+        name: "Posterior Majority Vote",
+        id: "bayes",
+        color: COLORS.bayes,
+        compute: "Very heavy",
+        note: "Keeps all remaining hypotheses and predicts the channel with the most posterior mass.",
+        predict(t, params, data) {
+          const votes = new Float32Array(CHANNELS);
+          for (let i = 0; i < Math.min(model.candidates.length, 8000); i++) {
+            const c = model.candidates[i];
+            if (c.weight <= 0.000001) break;
+            const ch = channelFromCandidate(c, t, params, data.active, data.perm);
+            votes[ch] += c.weight;
+          }
+          let best = 0;
+          for (let ch = 1; ch < CHANNELS; ch++) {
+            if (votes[ch] > votes[best]) best = ch;
+          }
+          return best;
+        }
+      };
+    }
+
+    function makeNgramFallback(feedback) {
+      const transitions = Array.from({ length: CHANNELS }, () => new Float32Array(CHANNELS));
+      const global = new Float32Array(CHANNELS);
+      let previous = -1;
+      for (const obs of feedback) {
+        if (obs < 0) continue;
+        global[obs] += 1;
+        if (previous >= 0) transitions[previous][obs] += 1;
+        previous = obs;
+      }
+      return {
+        name: "Transition Memorizer",
+        id: "ngram",
+        color: COLORS.violet,
+        compute: "Large memory",
+        note: "Learns observed transitions but does not recover the hidden clock/state.",
+        predict(t, params, data, lastActual) {
+          const row = lastActual >= 0 ? transitions[lastActual] : global;
+          let best = 0;
+          let bestScore = -1;
+          for (let ch = 0; ch < CHANNELS; ch++) {
+            const score = row[ch] + 0.02 * global[ch];
+            if (score > bestScore) {
+              bestScore = score;
+              best = ch;
+            }
+          }
+          return best;
+        }
+      };
+    }
+
+    function makeMapFallback(feedback) {
+      const counts = new Float32Array(CHANNELS);
+      for (const obs of feedback) {
+        if (obs >= 0) counts[obs] += 1;
+      }
+      return {
+        name: "Active-Map Mode",
+        id: "map",
+        color: COLORS.amber,
+        compute: "Embedded",
+        note: "Predicts the most common active channel, useful only as a frequency-density fallback.",
+        predict() {
+          let best = 0;
+          for (let ch = 1; ch < CHANNELS; ch++) {
+            if (counts[ch] > counts[best]) best = ch;
+          }
+          return best;
+        }
+      };
+    }
+
+    function makeRandomFallback(seed) {
+      const rng = mulberry32(seed * 424242 + 9);
+      return {
+        name: "Random One-Bin",
+        id: "random",
+        color: COLORS.random,
+        compute: "Baseline",
+        note: "One random channel per decision.",
+        predict() {
+          return Math.floor(rng() * CHANNELS);
+        }
+      };
+    }
+
+    function evaluatePredictor(predictor, params, data) {
+      const trace = [];
+      let exactHits = 0;
+      let disrupted = 0;
+      let lastActual = -1;
+      const startT = params.pretrainSlots;
+
+      for (let i = 0; i < params.packets; i++) {
+        const decisionT = startT + i;
+        const targetT = decisionT + params.horizon;
+        const predicted = predictor.predict(targetT, params, data, lastActual);
+        const actual = data.hops[targetT];
+        const exact = predicted === actual;
+        const hit = hitWindow(actual, predicted, params.jamWidth);
+        if (exact) exactHits += 1;
+        if (hit) disrupted += 1;
+        if (trace.length < 420) trace.push({ t: i, actual, predicted, exact, hit });
+        lastActual = data.hops[decisionT];
+      }
+
+      return {
+        id: predictor.id,
+        name: predictor.name,
+        color: predictor.color,
+        compute: predictor.compute,
+        note: predictor.note,
+        exactHits,
+        exactRate: exactHits / params.packets,
+        disrupted,
+        rate: disrupted / params.packets,
+        pass: disrupted / params.packets >= TARGET,
+        trace
+      };
+    }
+
+    function runSimulation(params) {
+      const data = generateSequence(params);
+      const feedback = makeFeedback(params, data);
+      const posterior = trainPosterior(params, data, feedback);
+      const predictors = [
+        makeExactPredictor(posterior),
+        makeMajorityPosterior(posterior),
+        makeNgramFallback(feedback),
+        makeMapFallback(feedback),
+        makeRandomFallback(params.seed)
+      ];
+      const results = predictors.map(p => evaluatePredictor(p, params, data));
+      const sorted = [...results].sort((a, b) => b.rate - a.rate);
+      const exact = results.find(row => row.id === "exact");
+      const fallback = sorted.find(row => row.id !== "exact");
+      return { params, data, feedback, posterior, results, sorted, exact, fallback };
+    }
+
+    function renderSummary(result) {
+      const p = result.params;
+      const exact = result.exact;
+      const fallback = result.fallback;
+      const posterior = result.posterior;
+      const identified = posterior.remaining === 1 && exact.exactRate > 0.995;
+
+      els.exactMetric.textContent = fmtPct(exact.exactRate);
+      els.exactSub.textContent = `${fmtPct(exact.rate)} disruption with ${p.jamWidth} MHz width`;
+      els.posteriorMetric.textContent = fmtInt(posterior.remaining);
+      els.posteriorSub.textContent = `${fmtPct(posterior.confidence)} top-hypothesis mass`;
+      els.ceilingMetric.textContent = p.jamWidth === 1 ? "100%" : ">=100%";
+      els.ceilingSub.textContent = "Exact one-bin knowledge is the theoretical packet-hit ceiling";
+      els.fallbackMetric.textContent = fallback.name.replace(" Predictor", "");
+      els.fallbackSub.textContent = `${fmtPct(fallback.exactRate)} exact, ${fmtPct(fallback.rate)} disrupted`;
+
+      let cls = "panel verdict";
+      let text = "";
+      if (identified) {
+        text = `The hidden hop generator was identified during pretraining. In this model class, the optimal method is Bayesian system identification over the full latent state, followed by exact future-state rollout.`;
+      } else if (p.family === "chaotic" || p.driftPct > 0) {
+        cls += " fail";
+        text = `Exact prediction falls to ${fmtPct(exact.exactRate)} because the deployment stream is not fully explained by the pretraining model. Infinite compute cannot predict truly unmodelled randomness; it can only expose that the model class is incomplete.`;
+      } else {
+        cls += " warn";
+        text = `The posterior still has ${fmtInt(posterior.remaining)} live hypotheses. More clean active feedback or a richer observation design is needed before deployment.`;
+      }
+      els.verdict.className = cls;
+      els.verdict.textContent = text;
+    }
+
+    function renderTable(result) {
+      const rows = result.sorted.map(row => {
+        const badgeClass = row.pass ? "pass" : "miss";
+        const badgeText = row.pass ? "Meets" : "Misses";
+        return `
+          <tr class="${row.pass ? "pass" : ""}">
+            <td><span class="algo-name"><span class="swatch" style="background:${row.color}"></span>${row.name}</span></td>
+            <td>${fmtInt(row.disrupted)} / ${fmtInt(result.params.packets)}</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div class="bar-track"><div class="bar-fill" style="width:${Math.min(100, row.exactRate * 100).toFixed(2)}%;background:${row.color}"></div></div>
+                <strong>${fmtPct(row.exactRate)}</strong>
+              </div>
+            </td>
+            <td>${result.params.jamWidth} MHz, ${fmtPct(row.rate)} hit</td>
+            <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+            <td>${row.compute}</td>
+            <td>${row.note}</td>
+          </tr>
+        `;
+      }).join("");
+      els.resultsBody.innerHTML = rows;
+    }
+
+    function setupCanvas(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.round(rect.width * dpr));
+      canvas.height = Math.max(1, Math.round(rect.height * dpr));
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { ctx, w: rect.width, h: rect.height };
+    }
+
+    function drawPosteriorChart(result) {
+      const { ctx, w, h } = setupCanvas(els.posteriorChart);
+      ctx.clearRect(0, 0, w, h);
+      const pad = { l: 62, r: 16, t: 18, b: 42 };
+      const innerW = w - pad.l - pad.r;
+      const innerH = h - pad.t - pad.b;
+      const counts = result.posterior.counts;
+      const maxY = Math.max(1, counts[0] || 1);
+
+      ctx.fillStyle = "#fbfcfb";
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = "#d7dfda";
+      ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+
+      ctx.font = "12px Inter, Segoe UI, sans-serif";
+      ctx.fillStyle = "#60706a";
+      ctx.strokeStyle = "#e7ece8";
+      for (let i = 0; i <= 5; i++) {
+        const value = maxY * i / 5;
+        const y = pad.t + innerH - (value / maxY) * innerH;
+        ctx.beginPath();
+        ctx.moveTo(pad.l, y);
+        ctx.lineTo(w - pad.r, y);
+        ctx.stroke();
+        ctx.fillText(fmtInt(value), 8, y + 4);
+      }
+
+      ctx.strokeStyle = COLORS.exact;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      const step = Math.max(1, Math.floor(counts.length / 520));
+      let first = true;
+      for (let i = 0; i < counts.length; i += step) {
+        const x = pad.l + (i / Math.max(1, counts.length - 1)) * innerW;
+        const y = pad.t + innerH - (counts[i] / maxY) * innerH;
+        if (first) {
+          ctx.moveTo(x, y);
+          first = false;
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.stroke();
+
+      ctx.fillStyle = "#60706a";
+      const maxX = Math.max(1, result.params.pretrainSlots);
+      for (let t = 0; t <= maxX; t += Math.max(20, Math.round(maxX / 5 / 20) * 20)) {
+        const x = pad.l + (t / maxX) * innerW;
+        ctx.fillText(String(t), x - 8, h - 16);
+      }
+      ctx.fillText("observations", w - 88, h - 16);
+    }
+
+    function drawPredictionChart(result) {
+      const { ctx, w, h } = setupCanvas(els.predictionChart);
+      ctx.clearRect(0, 0, w, h);
+      const pad = { l: 42, r: 14, t: 18, b: 34 };
+      const innerW = w - pad.l - pad.r;
+      const innerH = h - pad.t - pad.b;
+      const trace = result.exact.trace;
+
+      ctx.fillStyle = "#fbfcfb";
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = "#d7dfda";
+      ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+
+      ctx.font = "12px Inter, Segoe UI, sans-serif";
+      ctx.fillStyle = "#60706a";
+      ctx.strokeStyle = "#e7ece8";
+      for (let ch = 0; ch <= CHANNELS; ch += 10) {
+        const y = pad.t + innerH - (ch / CHANNELS) * innerH;
+        ctx.beginPath();
+        ctx.moveTo(pad.l, y);
+        ctx.lineTo(w - pad.r, y);
+        ctx.stroke();
+        ctx.fillText(`${FIRST_MHZ + ch}`, 6, y + 4);
+      }
+
+      ctx.strokeStyle = COLORS.exact;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      trace.forEach((item, i) => {
+        const x = pad.l + (i / Math.max(1, trace.length - 1)) * innerW;
+        const y = pad.t + innerH - (item.predicted / CHANNELS) * innerH;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      for (let i = 0; i < trace.length; i++) {
+        const item = trace[i];
+        const x = pad.l + (i / Math.max(1, trace.length - 1)) * innerW;
+        const y = pad.t + innerH - (item.actual / CHANNELS) * innerH;
+        ctx.fillStyle = item.exact ? COLORS.exact : COLORS.red;
+        ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
+      }
+
+      ctx.fillStyle = "#60706a";
+      ctx.fillText("MHz", 8, 14);
+      ctx.fillText("packets", w - 62, h - 12);
+      els.traceMeta.textContent = `${fmtPct(result.exact.exactRate)} exact over deployment`;
+    }
+
+    function renderAll(result) {
+      renderSummary(result);
+      renderTable(result);
+      drawPosteriorChart(result);
+      drawPredictionChart(result);
+    }
+
+    function runNow() {
+      syncControls();
+      els.runStatus.textContent = "Running";
+      window.setTimeout(() => {
+        const params = parseParams();
+        latest = runSimulation(params);
+        renderAll(latest);
+        els.runStatus.textContent = latest.exact.pass ? "Exact method viable" : "Exact method failed";
+      }, 20);
+    }
+
+    function resetDefaults() {
+      els.family.value = "affine";
+      els.activeBins.value = "32";
+      els.driftPct.value = "0";
+      els.pretrainSlots.value = "400";
+      els.feedbackProb.value = "100";
+      els.wrongProb.value = "0";
+      els.horizon.value = "2";
+      els.jamWidth.value = "1";
+      els.packets.value = "12800";
+      els.seed.value = "91011";
+      runNow();
+    }
+
+    for (const el of [
+      els.family,
+      els.activeBins,
+      els.driftPct,
+      els.pretrainSlots,
+      els.feedbackProb,
+      els.wrongProb,
+      els.horizon,
+      els.jamWidth,
+      els.packets,
+      els.seed
+    ]) {
+      el.addEventListener("input", syncControls);
+      el.addEventListener("change", runNow);
+    }
+
+    els.runBtn.addEventListener("click", runNow);
+    els.resetBtn.addEventListener("click", resetDefaults);
+    window.addEventListener("resize", () => {
+      if (latest) renderAll(latest);
+    });
+
+    syncControls();
+    runNow();
+  </script>
+</body>
+</html>

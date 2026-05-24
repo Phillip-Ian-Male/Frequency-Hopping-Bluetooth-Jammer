@@ -1,0 +1,1558 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Active-Map Learning Feasibility Simulator</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f3;
+      --surface: #ffffff;
+      --surface-2: #edf2ee;
+      --ink: #17211d;
+      --muted: #61716b;
+      --border: #d7dfda;
+      --grid: #e6ece8;
+      --green: #168067;
+      --teal: #0f766e;
+      --blue: #315f9d;
+      --violet: #6d5fb3;
+      --amber: #b46b12;
+      --red: #b84035;
+      --shadow: 0 16px 42px rgba(23, 33, 29, 0.08);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      width: min(1540px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 22px 0 30px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 0 2px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.4rem, 2vw, 2.32rem);
+      line-height: 1.05;
+      letter-spacing: 0;
+      font-weight: 780;
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.96rem;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 38px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      color: var(--muted);
+      white-space: nowrap;
+      font-weight: 680;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(292px, 360px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+      margin-top: 18px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .controls {
+      position: sticky;
+      top: 14px;
+      padding: 14px;
+    }
+
+    .control-group {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .control-group:first-child {
+      padding-top: 0;
+    }
+
+    .control-group:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .group-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 10px;
+      color: var(--ink);
+      font-size: 0.78rem;
+      font-weight: 780;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      margin: 12px 0;
+    }
+
+    .field:first-of-type {
+      margin-top: 0;
+    }
+
+    .label-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    output {
+      color: var(--ink);
+      font-weight: 720;
+      white-space: nowrap;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--green);
+    }
+
+    select,
+    input[type="number"] {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: #fbfcfb;
+      color: var(--ink);
+      padding: 7px 9px;
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .run-button,
+    .ghost-button {
+      min-height: 42px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-weight: 760;
+    }
+
+    .run-button {
+      background: var(--green);
+      color: #fff;
+      padding: 0 14px;
+    }
+
+    .ghost-button {
+      width: 44px;
+      background: var(--surface-2);
+      border-color: var(--border);
+      color: var(--ink);
+    }
+
+    .main {
+      display: grid;
+      gap: 18px;
+      min-width: 0;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric {
+      min-height: 112px;
+      padding: 15px;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 720;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .metric-value {
+      margin-top: 10px;
+      font-size: clamp(1.38rem, 2.2vw, 2.18rem);
+      line-height: 1;
+      font-weight: 820;
+      letter-spacing: 0;
+    }
+
+    .metric-sub {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.35;
+    }
+
+    .verdict {
+      padding: 13px 15px;
+      border-left: 5px solid var(--green);
+      color: var(--ink);
+      line-height: 1.45;
+    }
+
+    .verdict.warn {
+      border-left-color: var(--amber);
+    }
+
+    .verdict.fail {
+      border-left-color: var(--red);
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.18fr) minmax(360px, 0.82fr);
+      gap: 18px;
+    }
+
+    .chart-panel {
+      padding: 14px;
+      min-width: 0;
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 780;
+      letter-spacing: 0;
+    }
+
+    .panel-meta {
+      color: var(--muted);
+      font-size: 0.84rem;
+      white-space: nowrap;
+    }
+
+    canvas {
+      width: 100%;
+      display: block;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fbfcfb;
+    }
+
+    #learningChart,
+    #mapChart {
+      height: 390px;
+    }
+
+    .table-panel {
+      overflow: hidden;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+      font-size: 0.91rem;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      background: var(--surface-2);
+      color: var(--muted);
+      text-align: left;
+      font-size: 0.76rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tbody td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    tbody tr.pass {
+      background: #dff3ed;
+    }
+
+    tbody tr.bound {
+      background: #f7f0df;
+    }
+
+    .algo-name {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      font-weight: 760;
+      white-space: nowrap;
+    }
+
+    .swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      flex: 0 0 auto;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 62px;
+      min-height: 25px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 780;
+    }
+
+    .badge.pass {
+      color: #0f5f4d;
+      background: #c9eadf;
+    }
+
+    .badge.miss {
+      color: #7d342d;
+      background: #f4d8d5;
+    }
+
+    .badge.bound {
+      color: #76500d;
+      background: #f1dfb7;
+    }
+
+    .bar-track {
+      width: min(210px, 24vw);
+      height: 9px;
+      border-radius: 999px;
+      background: #e7ece8;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--green);
+    }
+
+    .footer-note {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.45;
+      padding: 0 2px;
+    }
+
+    @media (max-width: 1120px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        position: static;
+      }
+
+      .summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .chart-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .app {
+        width: min(100vw - 18px, 1540px);
+        padding-top: 12px;
+      }
+
+      .topbar,
+      .panel-head {
+        display: grid;
+      }
+
+      .summary {
+        grid-template-columns: 1fr;
+      }
+
+      .status-pill {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <h1>Active-Map Learning Feasibility Simulator</h1>
+        <div class="subtitle">Tests whether a 10 MHz contiguous jammer can meet 36% by learning the active channel map</div>
+      </div>
+      <div class="status-pill" aria-live="polite"><span class="dot"></span><span id="runStatus">Ready</span></div>
+    </header>
+
+    <div class="layout">
+      <aside class="panel controls" aria-label="Simulation controls">
+        <div class="control-group">
+          <div class="group-title">Active Map</div>
+          <label class="field">
+            <span class="label-row"><span>Map model</span></span>
+            <select id="mapModel">
+              <option value="clustered" selected>Clustered AFH map</option>
+              <option value="scattered">Scattered AFH map</option>
+              <option value="dual">Dual-cluster AFH map</option>
+              <option value="drifting">Slow drifting cluster</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Active bins</span><output id="activeBinsOut">24</output></span>
+            <input id="activeBins" type="range" min="20" max="79" step="1" value="24">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Traffic skew</span><output id="skewOut">20%</output></span>
+            <input id="skew" type="range" min="0" max="90" step="5" value="20">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Map change interval</span><output id="changeOut">Static</output></span>
+            <input id="changeSec" type="range" min="0" max="30" step="1" value="0">
+          </label>
+        </div>
+
+        <div class="control-group">
+          <div class="group-title">Jammer</div>
+          <label class="field">
+            <span class="label-row"><span>Max bandwidth</span><output id="maxBwOut">10 MHz</output></span>
+            <input id="maxBw" type="range" min="1" max="20" step="1" value="10">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Used bandwidth</span><output id="jamBwOut">10 MHz</output></span>
+            <input id="jamBw" type="range" min="1" max="10" step="1" value="10">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Response time</span><output id="responseOut">2500 us</output></span>
+            <input id="responseUs" type="range" min="0" max="6000" step="125" value="2500">
+          </label>
+        </div>
+
+        <div class="control-group">
+          <div class="group-title">Observation</div>
+          <label class="field">
+            <span class="label-row"><span>Detection probability</span><output id="detectOut">85%</output></span>
+            <input id="detectProb" type="range" min="20" max="100" step="1" value="85">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Wrong-bin reports</span><output id="falseOut">3%</output></span>
+            <input id="falseProb" type="range" min="0" max="30" step="1" value="3">
+          </label>
+        </div>
+
+        <div class="control-group">
+          <div class="group-title">Run</div>
+          <label class="field">
+            <span class="label-row"><span>Packets</span><output id="packetOut">16000</output></span>
+            <input id="packets" type="range" min="1600" max="48000" step="1600" value="16000">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Jetson particles</span><output id="particlesOut">160</output></span>
+            <input id="particles" type="range" min="40" max="400" step="40" value="160">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Seed</span></span>
+            <input id="seed" type="number" min="1" max="999999" step="1" value="2402">
+          </label>
+          <div class="button-row">
+            <button id="runBtn" class="run-button" type="button">Run feasibility test</button>
+            <button id="resetBtn" class="ghost-button" type="button" title="Reset defaults" aria-label="Reset defaults">↺</button>
+          </div>
+        </div>
+      </aside>
+
+      <section class="main">
+        <section class="summary" aria-label="Summary">
+          <div class="panel metric">
+            <div class="metric-label">Active-map bound</div>
+            <div id="boundMetric" class="metric-value">-</div>
+            <div id="boundSub" class="metric-sub">-</div>
+          </div>
+          <div class="panel metric">
+            <div class="metric-label">Best learner</div>
+            <div id="bestMetric" class="metric-value">-</div>
+            <div id="bestSub" class="metric-sub">-</div>
+          </div>
+          <div class="panel metric">
+            <div class="metric-label">Minimum active bins</div>
+            <div id="minBinsMetric" class="metric-value">-</div>
+            <div id="minBinsSub" class="metric-sub">-</div>
+          </div>
+          <div class="panel metric">
+            <div class="metric-label">Best platform</div>
+            <div id="platformMetric" class="metric-value">-</div>
+            <div id="platformSub" class="metric-sub">-</div>
+          </div>
+        </section>
+
+        <div id="verdict" class="panel verdict">Run a scenario to see whether active-map learning can meet the packet disruption target.</div>
+
+        <section class="chart-grid">
+          <div class="panel chart-panel">
+            <div class="panel-head">
+              <h2 class="panel-title">Learning Curve</h2>
+              <div class="panel-meta">Rolling 1 second disruption rate</div>
+            </div>
+            <canvas id="learningChart" width="940" height="430" aria-label="Learning curve chart"></canvas>
+          </div>
+          <div class="panel chart-panel">
+            <div class="panel-head">
+              <h2 class="panel-title">Channel Probability Map</h2>
+              <div id="mapMeta" class="panel-meta">True map and best learner</div>
+            </div>
+            <canvas id="mapChart" width="620" height="430" aria-label="Channel probability map"></canvas>
+          </div>
+        </section>
+
+        <section class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Algorithm</th>
+                  <th>Disrupted</th>
+                  <th>Rate</th>
+                  <th>Final 20%</th>
+                  <th>Time to 36%</th>
+                  <th>Goal</th>
+                  <th>Compute class</th>
+                  <th>Implementation note</th>
+                </tr>
+              </thead>
+              <tbody id="resultsBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="footer-note">
+          The active-map bound is not an implementable algorithm. It is an upper bound for active-map-only learning: if it misses 36%, no active-map learner can meet the target without extra information, wider bandwidth, or a different disruption mechanism.
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    "use strict";
+
+    const CHANNELS = 79;
+    const FIRST_MHZ = 2402;
+    const SLOT_US = 625;
+    const SLOTS_PER_SECOND = 1600;
+    const TARGET = 0.36;
+
+    const COLORS = {
+      oracle: "#b46b12",
+      random: "#747b84",
+      ema: "#168067",
+      bayes: "#315f9d",
+      change: "#0f766e",
+      ucb: "#6d5fb3",
+      particle: "#c24f39"
+    };
+
+    const ALGORITHMS = [
+      {
+        id: "oracle",
+        name: "Oracle Active-Map Bound",
+        compute: "Upper bound",
+        note: "Knows the true active-map probabilities, but not the exact next hop.",
+        make: (params, data) => makeOracleMap(data)
+      },
+      {
+        id: "random",
+        name: "Random Window",
+        compute: "MCU trivial",
+        note: "Coverage-only baseline.",
+        make: (params) => makeRandomWindow(params.seed + 71)
+      },
+      {
+        id: "ema",
+        name: "Embedded EMA Map",
+        compute: "ESP32 viable",
+        note: "Decaying channel counts; chooses the densest contiguous window.",
+        make: () => makeEmaMap(2600)
+      },
+      {
+        id: "bayes",
+        name: "Bayesian Channel Map",
+        compute: "ESP32 viable",
+        note: "Dirichlet-style channel posterior with neighbor smoothing.",
+        make: () => makeBayesianMap()
+      },
+      {
+        id: "change",
+        name: "Two-Rate Change Learner",
+        compute: "ESP32 viable",
+        note: "Blends fast and slow memories to handle AFH map changes.",
+        make: () => makeTwoRateLearner()
+      },
+      {
+        id: "ucb",
+        name: "UCB Window Bandit",
+        compute: "MCU viable with feedback",
+        note: "Learns jamming windows from hit feedback; less realistic if feedback is unavailable.",
+        make: () => makeUcbBandit()
+      },
+      {
+        id: "particle",
+        name: "Jetson Particle Ensemble",
+        compute: "Jetson-class",
+        note: "Particle cluster hypotheses plus density learning; heavier but more adaptive.",
+        make: (params) => makeParticleEnsemble(params)
+      }
+    ];
+
+    const els = {
+      mapModel: document.getElementById("mapModel"),
+      activeBins: document.getElementById("activeBins"),
+      skew: document.getElementById("skew"),
+      changeSec: document.getElementById("changeSec"),
+      maxBw: document.getElementById("maxBw"),
+      jamBw: document.getElementById("jamBw"),
+      responseUs: document.getElementById("responseUs"),
+      detectProb: document.getElementById("detectProb"),
+      falseProb: document.getElementById("falseProb"),
+      packets: document.getElementById("packets"),
+      particles: document.getElementById("particles"),
+      seed: document.getElementById("seed"),
+      runBtn: document.getElementById("runBtn"),
+      resetBtn: document.getElementById("resetBtn"),
+      activeBinsOut: document.getElementById("activeBinsOut"),
+      skewOut: document.getElementById("skewOut"),
+      changeOut: document.getElementById("changeOut"),
+      maxBwOut: document.getElementById("maxBwOut"),
+      jamBwOut: document.getElementById("jamBwOut"),
+      responseOut: document.getElementById("responseOut"),
+      detectOut: document.getElementById("detectOut"),
+      falseOut: document.getElementById("falseOut"),
+      packetOut: document.getElementById("packetOut"),
+      particlesOut: document.getElementById("particlesOut"),
+      runStatus: document.getElementById("runStatus"),
+      boundMetric: document.getElementById("boundMetric"),
+      boundSub: document.getElementById("boundSub"),
+      bestMetric: document.getElementById("bestMetric"),
+      bestSub: document.getElementById("bestSub"),
+      minBinsMetric: document.getElementById("minBinsMetric"),
+      minBinsSub: document.getElementById("minBinsSub"),
+      platformMetric: document.getElementById("platformMetric"),
+      platformSub: document.getElementById("platformSub"),
+      verdict: document.getElementById("verdict"),
+      learningChart: document.getElementById("learningChart"),
+      mapChart: document.getElementById("mapChart"),
+      mapMeta: document.getElementById("mapMeta"),
+      resultsBody: document.getElementById("resultsBody")
+    };
+
+    let latest = null;
+
+    function mulberry32(seed) {
+      let t = seed >>> 0;
+      return function next() {
+        t += 0x6D2B79F5;
+        let r = Math.imul(t ^ (t >>> 15), 1 | t);
+        r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+        return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function fmtInt(value) {
+      return Math.round(value).toLocaleString("en-US");
+    }
+
+    function fmtPct(value) {
+      return `${(value * 100).toFixed(1)}%`;
+    }
+
+    function mod(value, base) {
+      return ((value % base) + base) % base;
+    }
+
+    function normalize(weights) {
+      let total = 0;
+      for (let i = 0; i < weights.length; i++) total += weights[i];
+      if (total <= 0) return weights;
+      for (let i = 0; i < weights.length; i++) weights[i] /= total;
+      return weights;
+    }
+
+    function bestWindowFromWeights(weights, width) {
+      let bestStart = 0;
+      let bestScore = -Infinity;
+      for (let start = 0; start <= CHANNELS - width; start++) {
+        let score = 0;
+        for (let i = 0; i < width; i++) score += weights[start + i] || 0;
+        if (score > bestScore) {
+          bestScore = score;
+          bestStart = start;
+        }
+      }
+      return bestStart;
+    }
+
+    function hitBlock(channel, start, width) {
+      return channel >= start && channel < start + width;
+    }
+
+    function responseProfile(responseUs) {
+      const exact = responseUs / SLOT_US;
+      const offset = Math.floor(exact);
+      const phase = exact - offset;
+      return { offset, overlap: phase === 0 ? 1 : 1 - phase };
+    }
+
+    function shuffledRange(n, rng) {
+      const arr = Array.from({ length: n }, (_, i) => i);
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        const temp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = temp;
+      }
+      return arr;
+    }
+
+    function parseParams() {
+      const maxBw = Number(els.maxBw.value);
+      const jamBw = Math.min(Number(els.jamBw.value), maxBw);
+      return {
+        mapModel: els.mapModel.value,
+        activeBins: Number(els.activeBins.value),
+        skew: Number(els.skew.value) / 100,
+        changeSec: Number(els.changeSec.value),
+        maxBw,
+        jamBw,
+        responseUs: Number(els.responseUs.value),
+        detectProb: Number(els.detectProb.value),
+        falseProb: Number(els.falseProb.value),
+        packets: Number(els.packets.value),
+        particles: Number(els.particles.value),
+        seed: clamp(Number(els.seed.value) || 1, 1, 999999)
+      };
+    }
+
+    function syncControls() {
+      const maxBw = Number(els.maxBw.value);
+      els.jamBw.max = String(maxBw);
+      if (Number(els.jamBw.value) > maxBw) els.jamBw.value = String(maxBw);
+
+      els.activeBinsOut.textContent = els.activeBins.value;
+      els.skewOut.textContent = `${els.skew.value}%`;
+      els.changeOut.textContent = Number(els.changeSec.value) === 0 ? "Static" : `${els.changeSec.value}s`;
+      els.maxBwOut.textContent = `${els.maxBw.value} MHz`;
+      els.jamBwOut.textContent = `${els.jamBw.value} MHz`;
+      els.responseOut.textContent = `${els.responseUs.value} us`;
+      els.detectOut.textContent = `${els.detectProb.value}%`;
+      els.falseOut.textContent = `${els.falseProb.value}%`;
+      els.packetOut.textContent = Number(els.packets.value).toLocaleString("en-US");
+      els.particlesOut.textContent = els.particles.value;
+    }
+
+    function createSegment(params, rng, segmentIndex) {
+      const weights = new Float32Array(CHANNELS);
+      const active = [];
+      const count = params.activeBins;
+      const skew = params.skew;
+
+      if (params.mapModel === "scattered") {
+        const picks = shuffledRange(CHANNELS, rng).slice(0, count);
+        for (const ch of picks) active.push(ch);
+      } else if (params.mapModel === "dual") {
+        const firstCount = Math.floor(count / 2);
+        const secondCount = count - firstCount;
+        const firstStart = Math.floor(rng() * Math.max(1, CHANNELS - firstCount - 28));
+        const secondStart = clamp(firstStart + 24 + Math.floor(rng() * 22), 0, CHANNELS - secondCount);
+        for (let i = 0; i < firstCount; i++) active.push(firstStart + i);
+        for (let i = 0; i < secondCount; i++) active.push(secondStart + i);
+      } else {
+        const drift = params.mapModel === "drifting" ? segmentIndex * Math.max(1, Math.round(count / 4)) : 0;
+        const baseStart = Math.floor(rng() * (CHANNELS - count + 1));
+        const start = mod(baseStart + drift, CHANNELS - count + 1);
+        for (let i = 0; i < count; i++) active.push(start + i);
+      }
+
+      const center = active.reduce((sum, ch) => sum + ch, 0) / active.length;
+      const sigma = Math.max(2.5, count / 4.5);
+      for (let i = 0; i < active.length; i++) {
+        const ch = active[i];
+        const distance = Math.abs(ch - center);
+        const hot = Math.exp(-(distance * distance) / (2 * sigma * sigma));
+        const randomHot = params.mapModel === "scattered" ? 0.35 + rng() * 0.65 : hot;
+        weights[ch] = 1 + skew * 4.5 * randomHot;
+      }
+
+      normalize(weights);
+      return { weights, active };
+    }
+
+    function sampleWeighted(weights, rng) {
+      let x = rng();
+      for (let i = 0; i < weights.length; i++) {
+        x -= weights[i];
+        if (x <= 0) return i;
+      }
+      return weights.length - 1;
+    }
+
+    function generateData(params) {
+      const rng = mulberry32(params.seed * 2654435761 + 19);
+      const hops = new Uint8Array(params.packets);
+      const segmentLength = params.changeSec > 0 ? params.changeSec * SLOTS_PER_SECOND : params.packets;
+      const segments = [];
+
+      for (let start = 0, idx = 0; start < params.packets; start += segmentLength, idx++) {
+        segments.push({
+          start,
+          end: Math.min(params.packets, start + segmentLength),
+          ...createSegment(params, rng, idx)
+        });
+      }
+
+      for (const segment of segments) {
+        for (let t = segment.start; t < segment.end; t++) {
+          hops[t] = sampleWeighted(segment.weights, rng);
+        }
+      }
+
+      const observations = new Int16Array(params.packets);
+      observations.fill(-1);
+      const obsRng = mulberry32(params.seed * 1103515245 + 97);
+      for (let t = 0; t < params.packets; t++) {
+        if (obsRng() > params.detectProb / 100) continue;
+        let observed = hops[t];
+        if (obsRng() < params.falseProb / 100) {
+          const offset = 1 + Math.floor(obsRng() * (CHANNELS - 1));
+          observed = (observed + offset) % CHANNELS;
+        }
+        observations[t] = observed;
+      }
+
+      return { hops, observations, segments };
+    }
+
+    function segmentForTime(data, t) {
+      const index = data.segments.findIndex(segment => t >= segment.start && t < segment.end);
+      return data.segments[index < 0 ? data.segments.length - 1 : index];
+    }
+
+    function aggregateTrueWeights(data) {
+      const weights = new Float32Array(CHANNELS);
+      let totalSlots = 0;
+      for (const segment of data.segments) {
+        const len = segment.end - segment.start;
+        totalSlots += len;
+        for (let i = 0; i < CHANNELS; i++) weights[i] += segment.weights[i] * len;
+      }
+      for (let i = 0; i < CHANNELS; i++) weights[i] /= Math.max(1, totalSlots);
+      return weights;
+    }
+
+    function makeOracleMap(data) {
+      return {
+        predict(targetT, width) {
+          const segment = segmentForTime(data, targetT);
+          return bestWindowFromWeights(segment.weights, width);
+        },
+        observe() {},
+        feedback() {},
+        snapshotWeights() {
+          return aggregateTrueWeights(data);
+        }
+      };
+    }
+
+    function makeRandomWindow(seed) {
+      const rng = mulberry32(seed * 7919 + 3);
+      return {
+        predict(targetT, width) {
+          return Math.floor(rng() * (CHANNELS - width + 1));
+        },
+        observe() {},
+        feedback() {},
+        snapshotWeights() {
+          const weights = new Float32Array(CHANNELS);
+          for (let i = 0; i < CHANNELS; i++) weights[i] = 1 / CHANNELS;
+          return weights;
+        }
+      };
+    }
+
+    function makeEmaMap(memorySlots) {
+      const weights = new Float32Array(CHANNELS);
+      weights.fill(1);
+      const decay = Math.exp(-1 / memorySlots);
+      return {
+        predict(targetT, width) {
+          return bestWindowFromWeights(weights, width);
+        },
+        observe(t, obs) {
+          for (let i = 0; i < CHANNELS; i++) weights[i] = 0.01 + weights[i] * decay;
+          if (obs >= 0) weights[obs] += 1.25;
+        },
+        feedback() {},
+        snapshotWeights() {
+          const copy = new Float32Array(weights);
+          return normalize(copy);
+        }
+      };
+    }
+
+    function makeBayesianMap() {
+      const alpha = new Float32Array(CHANNELS);
+      alpha.fill(0.35);
+      return {
+        predict(targetT, width) {
+          return bestWindowFromWeights(alpha, width);
+        },
+        observe(t, obs) {
+          if (t > 0 && t % 4000 === 0) {
+            for (let i = 0; i < CHANNELS; i++) alpha[i] = 0.35 + alpha[i] * 0.82;
+          }
+          if (obs < 0) return;
+          alpha[obs] += 1.4;
+          if (obs > 0) alpha[obs - 1] += 0.09;
+          if (obs < CHANNELS - 1) alpha[obs + 1] += 0.09;
+        },
+        feedback() {},
+        snapshotWeights() {
+          const copy = new Float32Array(alpha);
+          return normalize(copy);
+        }
+      };
+    }
+
+    function makeTwoRateLearner() {
+      const fast = new Float32Array(CHANNELS);
+      const slow = new Float32Array(CHANNELS);
+      fast.fill(1);
+      slow.fill(1);
+      const fastDecay = Math.exp(-1 / 550);
+      const slowDecay = Math.exp(-1 / 5200);
+      let blend = 0.35;
+
+      return {
+        predict(targetT, width) {
+          const combined = new Float32Array(CHANNELS);
+          for (let i = 0; i < CHANNELS; i++) combined[i] = blend * fast[i] + (1 - blend) * slow[i];
+          return bestWindowFromWeights(combined, width);
+        },
+        observe(t, obs) {
+          for (let i = 0; i < CHANNELS; i++) {
+            fast[i] = 0.03 + fast[i] * fastDecay;
+            slow[i] = 0.03 + slow[i] * slowDecay;
+          }
+          if (obs >= 0) {
+            fast[obs] += 1.7;
+            slow[obs] += 1.0;
+          }
+          if (t % 160 === 0) {
+            let diff = 0;
+            let total = 0;
+            for (let i = 0; i < CHANNELS; i++) {
+              diff += Math.abs(fast[i] - slow[i]);
+              total += slow[i];
+            }
+            blend = clamp(diff / Math.max(1, total) * 7, 0.25, 0.82);
+          }
+        },
+        feedback() {},
+        snapshotWeights() {
+          const combined = new Float32Array(CHANNELS);
+          for (let i = 0; i < CHANNELS; i++) combined[i] = blend * fast[i] + (1 - blend) * slow[i];
+          return normalize(combined);
+        }
+      };
+    }
+
+    function makeUcbBandit() {
+      const starts = CHANNELS;
+      const wins = new Float32Array(starts);
+      const pulls = new Float32Array(starts);
+      let decisions = 1;
+      let lastStart = 0;
+
+      return {
+        predict(targetT, width) {
+          const maxStart = CHANNELS - width;
+          let best = 0;
+          let bestScore = -Infinity;
+          for (let start = 0; start <= maxStart; start++) {
+            const mean = wins[start] / Math.max(1, pulls[start]);
+            const bonus = 0.42 * Math.sqrt(Math.log(decisions + 1) / Math.max(1, pulls[start]));
+            const score = mean + bonus;
+            if (score > bestScore) {
+              bestScore = score;
+              best = start;
+            }
+          }
+          lastStart = best;
+          decisions += 1;
+          return best;
+        },
+        observe() {},
+        feedback(t, info) {
+          const start = info.start ?? lastStart;
+          pulls[start] += 1;
+          wins[start] += info.hit ? 1 : 0;
+        },
+        snapshotWeights(width) {
+          const channel = new Float32Array(CHANNELS);
+          for (let start = 0; start <= CHANNELS - width; start++) {
+            const value = wins[start] / Math.max(1, pulls[start]);
+            for (let i = 0; i < width; i++) channel[start + i] += value;
+          }
+          return normalize(channel);
+        }
+      };
+    }
+
+    function makeParticleEnsemble(params) {
+      const rng = mulberry32(params.seed * 2718281 + 11);
+      const particleCount = params.particles;
+      const particles = [];
+      const density = new Float32Array(CHANNELS);
+      density.fill(0.2);
+
+      function randomParticle() {
+        const span = clamp(Math.round(params.activeBins * (0.72 + rng() * 0.72)), 8, CHANNELS);
+        const start = Math.floor(rng() * (CHANNELS - span + 1));
+        return { start, span, weight: 1 / particleCount };
+      }
+
+      for (let i = 0; i < particleCount; i++) particles.push(randomParticle());
+
+      function particleMass() {
+        const mass = new Float32Array(CHANNELS);
+        for (const p of particles) {
+          const v = p.weight / Math.max(1, p.span);
+          for (let ch = p.start; ch < p.start + p.span; ch++) mass[ch] += v;
+        }
+        return normalize(mass);
+      }
+
+      function resample() {
+        let total = 0;
+        for (const p of particles) total += p.weight;
+        if (total <= 0 || !Number.isFinite(total)) {
+          particles.length = 0;
+          for (let i = 0; i < particleCount; i++) particles.push(randomParticle());
+          return;
+        }
+        for (const p of particles) p.weight /= total;
+
+        const cumulative = [];
+        let c = 0;
+        for (const p of particles) {
+          c += p.weight;
+          cumulative.push(c);
+        }
+
+        const next = [];
+        for (let i = 0; i < particleCount; i++) {
+          const pick = rng();
+          let idx = 0;
+          while (idx < cumulative.length - 1 && cumulative[idx] < pick) idx++;
+          const parent = particles[idx];
+          let start = parent.start + Math.floor(rng() * 7) - 3;
+          let span = parent.span + Math.floor(rng() * 5) - 2;
+          span = clamp(span, 6, CHANNELS);
+          start = clamp(start, 0, CHANNELS - span);
+          if (rng() < 0.06) {
+            const fresh = randomParticle();
+            start = fresh.start;
+            span = fresh.span;
+          }
+          next.push({ start, span, weight: 1 / particleCount });
+        }
+        particles.length = 0;
+        particles.push(...next);
+      }
+
+      return {
+        predict(targetT, width) {
+          const mass = particleMass();
+          const combined = new Float32Array(CHANNELS);
+          const densityNorm = new Float32Array(density);
+          normalize(densityNorm);
+          for (let i = 0; i < CHANNELS; i++) combined[i] = 0.58 * densityNorm[i] + 0.42 * mass[i];
+          return bestWindowFromWeights(combined, width);
+        },
+        observe(t, obs) {
+          for (let i = 0; i < CHANNELS; i++) density[i] = 0.02 + density[i] * 0.9991;
+          if (obs >= 0) {
+            density[obs] += 1.55;
+            for (const p of particles) {
+              const inside = obs >= p.start && obs < p.start + p.span;
+              p.weight *= inside ? 1.08 : 0.985;
+            }
+          }
+          if (t > 0 && t % 220 === 0) resample();
+        },
+        feedback() {},
+        snapshotWeights() {
+          const mass = particleMass();
+          const densityNorm = new Float32Array(density);
+          normalize(densityNorm);
+          const combined = new Float32Array(CHANNELS);
+          for (let i = 0; i < CHANNELS; i++) combined[i] = 0.58 * densityNorm[i] + 0.42 * mass[i];
+          return normalize(combined);
+        }
+      };
+    }
+
+    function runAlgorithm(def, params, data) {
+      const algo = def.make(params, data);
+      const width = params.jamBw;
+      const profile = responseProfile(params.responseUs);
+      const scheduledStart = new Int16Array(params.packets);
+      const scheduledOwner = new Int16Array(params.packets);
+      const scheduledOverlap = new Float32Array(params.packets);
+      scheduledStart.fill(-1);
+      scheduledOwner.fill(-1);
+
+      const hitSeries = new Float32Array(params.packets);
+      let disrupted = 0;
+      let decisions = 0;
+      let finalDisrupted = 0;
+      const finalStart = Math.floor(params.packets * 0.8);
+
+      for (let t = 0; t < params.packets; t++) {
+        if (scheduledStart[t] >= 0) {
+          const hit = hitBlock(data.hops[t], scheduledStart[t], width);
+          const value = hit ? scheduledOverlap[t] : 0;
+          disrupted += value;
+          hitSeries[t] = value;
+          if (t >= finalStart) finalDisrupted += value;
+          decisions += 1;
+          algo.feedback(t, { start: scheduledStart[t], hit, value, channel: data.hops[t] });
+        }
+
+        if (profile.offset === 0) {
+          const start = algo.predict(t, width);
+          const hit = hitBlock(data.hops[t], start, width);
+          const value = hit ? profile.overlap : 0;
+          disrupted += value;
+          hitSeries[t] = value;
+          if (t >= finalStart) finalDisrupted += value;
+          decisions += 1;
+          algo.feedback(t, { start, hit, value, channel: data.hops[t] });
+        } else {
+          const targetT = t + profile.offset;
+          if (targetT < params.packets) {
+            scheduledStart[targetT] = algo.predict(targetT, width);
+            scheduledOwner[targetT] = 1;
+            scheduledOverlap[targetT] = profile.overlap;
+          }
+        }
+
+        algo.observe(t, data.observations[t]);
+      }
+
+      const finalPackets = Math.max(1, params.packets - finalStart);
+      const rolling = rollingRate(hitSeries, SLOTS_PER_SECOND);
+      return {
+        id: def.id,
+        name: def.name,
+        color: COLORS[def.id],
+        compute: def.compute,
+        note: def.note,
+        disrupted,
+        disruptedPackets: Math.round(disrupted),
+        rate: disrupted / params.packets,
+        finalRate: finalDisrupted / finalPackets,
+        pass: disrupted / params.packets >= TARGET,
+        finalPass: finalDisrupted / finalPackets >= TARGET,
+        timeToTarget: firstTimeAtTarget(rolling),
+        rolling,
+        snapshotWeights: algo.snapshotWeights ? algo.snapshotWeights(width) : null,
+        isBound: def.id === "oracle",
+        decisions
+      };
+    }
+
+    function rollingRate(series, window) {
+      const out = new Float32Array(series.length);
+      let sum = 0;
+      for (let i = 0; i < series.length; i++) {
+        sum += series[i];
+        if (i >= window) sum -= series[i - window];
+        out[i] = sum / Math.min(window, i + 1);
+      }
+      return out;
+    }
+
+    function firstTimeAtTarget(rolling) {
+      for (let i = SLOTS_PER_SECOND; i < rolling.length; i++) {
+        if (rolling[i] >= TARGET) return i / SLOTS_PER_SECOND;
+      }
+      return null;
+    }
+
+    function runSimulation(params) {
+      const data = generateData(params);
+      const results = ALGORITHMS.map(def => runAlgorithm(def, params, data));
+      const sorted = [...results].sort((a, b) => b.rate - a.rate);
+      const bound = results.find(row => row.id === "oracle");
+      const bestLearner = sorted.find(row => row.id !== "oracle");
+      const trueWeights = aggregateTrueWeights(data);
+      return { params, data, results, sorted, bound, bestLearner, trueWeights };
+    }
+
+    function renderSummary(result) {
+      const params = result.params;
+      const bound = result.bound;
+      const best = result.bestLearner;
+      const uniformMin = Math.floor(params.jamBw / TARGET);
+
+      els.boundMetric.textContent = fmtPct(bound.rate);
+      els.boundSub.textContent = bound.pass ? "Active-map-only target is possible" : "Active-map-only target is impossible here";
+      els.bestMetric.textContent = best.name.replace("Embedded ", "").replace("Jetson ", "");
+      els.bestSub.textContent = `${fmtPct(best.rate)} overall, ${fmtPct(best.finalRate)} final`;
+      els.minBinsMetric.textContent = `${uniformMin} bins`;
+      els.minBinsSub.textContent = `Uniform clustered map must be <= ${uniformMin} active bins`;
+      els.platformMetric.textContent = best.compute.replace(" viable", "");
+      els.platformSub.textContent = `${params.jamBw} MHz of ${CHANNELS} MHz, ${params.responseUs} us response`;
+
+      let verdictClass = "verdict";
+      let text = "";
+      if (!bound.pass) {
+        verdictClass += " fail";
+        text = `The oracle active-map bound is only ${fmtPct(bound.rate)}, so this scenario cannot meet 36% by active-map learning alone. Try fewer active bins, a more clustered map, wider bandwidth, or a method that predicts exact future hops rather than only active-map mass.`;
+      } else if (best.pass || best.finalPass) {
+        verdictClass += " ";
+        text = `${best.name} reaches ${fmtPct(best.rate)} overall and ${fmtPct(best.finalRate)} in the final 20% of the run. This scenario is a plausible candidate for embedded follow-up, assuming the hop map model matches measurements.`;
+      } else {
+        verdictClass += " warn";
+        text = `The active-map bound reaches ${fmtPct(bound.rate)}, but the best learner only reaches ${fmtPct(best.rate)} overall. That means the scenario is theoretically possible, but the learner needs more observation quality, more time, or a better model.`;
+      }
+      els.verdict.className = `panel ${verdictClass}`;
+      els.verdict.textContent = text;
+    }
+
+    function renderTable(result) {
+      const rows = result.sorted.map(row => {
+        const badgeClass = row.isBound ? "bound" : row.pass || row.finalPass ? "pass" : "miss";
+        const badgeText = row.isBound ? "Bound" : row.pass ? "Meets" : row.finalPass ? "Learns" : "Misses";
+        const time = row.timeToTarget === null ? "Never" : `${row.timeToTarget.toFixed(1)} s`;
+        return `
+          <tr class="${row.isBound ? "bound" : row.pass ? "pass" : ""}">
+            <td><span class="algo-name"><span class="swatch" style="background:${row.color}"></span>${row.name}</span></td>
+            <td>${fmtInt(row.disruptedPackets)} / ${fmtInt(result.params.packets)}</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div class="bar-track"><div class="bar-fill" style="width:${Math.min(100, row.rate * 100).toFixed(2)}%;background:${row.color}"></div></div>
+                <strong>${fmtPct(row.rate)}</strong>
+              </div>
+            </td>
+            <td>${fmtPct(row.finalRate)}</td>
+            <td>${time}</td>
+            <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+            <td>${row.compute}</td>
+            <td>${row.note}</td>
+          </tr>
+        `;
+      }).join("");
+      els.resultsBody.innerHTML = rows;
+    }
+
+    function setupCanvas(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.round(rect.width * dpr));
+      canvas.height = Math.max(1, Math.round(rect.height * dpr));
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { ctx, w: rect.width, h: rect.height };
+    }
+
+    function drawLearningChart(result) {
+      const { ctx, w, h } = setupCanvas(els.learningChart);
+      ctx.clearRect(0, 0, w, h);
+      const pad = { l: 54, r: 16, t: 18, b: 42 };
+      const innerW = w - pad.l - pad.r;
+      const innerH = h - pad.t - pad.b;
+      const maxSeconds = result.params.packets / SLOTS_PER_SECOND;
+      const maxY = Math.max(0.55, ...result.results.flatMap(row => sampleRolling(row.rolling))) * 1.05;
+
+      ctx.fillStyle = "#fbfcfb";
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = "#d7dfda";
+      ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+
+      ctx.font = "12px Inter, Segoe UI, sans-serif";
+      ctx.fillStyle = "#60706a";
+      ctx.strokeStyle = "#e7ece8";
+      for (let i = 0; i <= 5; i++) {
+        const value = maxY * i / 5;
+        const y = pad.t + innerH - (value / maxY) * innerH;
+        ctx.beginPath();
+        ctx.moveTo(pad.l, y);
+        ctx.lineTo(w - pad.r, y);
+        ctx.stroke();
+        ctx.fillText(`${Math.round(value * 100)}%`, 8, y + 4);
+      }
+
+      const targetY = pad.t + innerH - (TARGET / maxY) * innerH;
+      ctx.strokeStyle = "#168067";
+      ctx.setLineDash([6, 5]);
+      ctx.beginPath();
+      ctx.moveTo(pad.l, targetY);
+      ctx.lineTo(w - pad.r, targetY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#168067";
+      ctx.fillText("36%", pad.l + 6, targetY - 6);
+
+      for (let sec = 0; sec <= maxSeconds; sec += Math.max(1, Math.round(maxSeconds / 5))) {
+        const x = pad.l + (sec / maxSeconds) * innerW;
+        ctx.fillStyle = "#60706a";
+        ctx.fillText(`${sec}s`, x - 8, h - 16);
+      }
+
+      const lines = result.results.filter(row => ["oracle", "ema", "bayes", "change", "particle", "ucb"].includes(row.id));
+      for (const row of lines) {
+        ctx.strokeStyle = row.color;
+        ctx.lineWidth = row.id === result.bestLearner.id ? 3 : row.id === "oracle" ? 2.4 : 1.7;
+        ctx.beginPath();
+        const step = Math.max(1, Math.floor(row.rolling.length / 480));
+        let first = true;
+        for (let i = 0; i < row.rolling.length; i += step) {
+          const x = pad.l + (i / Math.max(1, row.rolling.length - 1)) * innerW;
+          const y = pad.t + innerH - (row.rolling[i] / maxY) * innerH;
+          if (first) {
+            ctx.moveTo(x, y);
+            first = false;
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.stroke();
+      }
+
+      drawLegend(ctx, lines, pad.l + 4, pad.t + 8, w - pad.r - 8);
+    }
+
+    function sampleRolling(rolling) {
+      const values = [];
+      const step = Math.max(1, Math.floor(rolling.length / 80));
+      for (let i = 0; i < rolling.length; i += step) values.push(rolling[i]);
+      return values;
+    }
+
+    function drawLegend(ctx, rows, x, y, maxX) {
+      ctx.font = "12px Inter, Segoe UI, sans-serif";
+      let cursorX = x;
+      let cursorY = y;
+      for (const row of rows) {
+        const label = row.name.replace(" Active-Map Bound", " Bound").replace("Embedded ", "").replace("Jetson ", "");
+        const width = ctx.measureText(label).width + 28;
+        if (cursorX + width > maxX) {
+          cursorX = x;
+          cursorY += 20;
+        }
+        ctx.fillStyle = row.color;
+        ctx.fillRect(cursorX, cursorY - 9, 10, 10);
+        ctx.fillStyle = "#60706a";
+        ctx.fillText(label, cursorX + 15, cursorY);
+        cursorX += width;
+      }
+    }
+
+    function drawMapChart(result) {
+      const { ctx, w, h } = setupCanvas(els.mapChart);
+      ctx.clearRect(0, 0, w, h);
+      const pad = { l: 42, r: 16, t: 18, b: 42 };
+      const innerW = w - pad.l - pad.r;
+      const innerH = h - pad.t - pad.b;
+      const best = result.bestLearner;
+      const learned = best.snapshotWeights || new Float32Array(CHANNELS);
+      const trueWeights = result.trueWeights;
+      const maxY = Math.max(0.001, ...Array.from(trueWeights), ...Array.from(learned)) * 1.18;
+      const bestStart = bestWindowFromWeights(learned, result.params.jamBw);
+
+      ctx.fillStyle = "#fbfcfb";
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = "#d7dfda";
+      ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+
+      const barW = innerW / CHANNELS;
+      for (let ch = 0; ch < CHANNELS; ch++) {
+        const x = pad.l + ch * barW;
+        const trueH = (trueWeights[ch] / maxY) * innerH;
+        const learnedH = (learned[ch] / maxY) * innerH;
+        if (ch >= bestStart && ch < bestStart + result.params.jamBw) {
+          ctx.fillStyle = "rgba(22, 128, 103, 0.12)";
+          ctx.fillRect(x, pad.t, Math.max(1, barW), innerH);
+        }
+        ctx.fillStyle = "#b46b12";
+        ctx.fillRect(x + 1, pad.t + innerH - trueH, Math.max(1, barW * 0.42), trueH);
+        ctx.fillStyle = best.color;
+        ctx.fillRect(x + barW * 0.48, pad.t + innerH - learnedH, Math.max(1, barW * 0.42), learnedH);
+      }
+
+      ctx.font = "12px Inter, Segoe UI, sans-serif";
+      ctx.fillStyle = "#60706a";
+      for (let ch = 0; ch <= CHANNELS; ch += 10) {
+        const x = pad.l + (ch / CHANNELS) * innerW;
+        ctx.fillText(`${FIRST_MHZ + ch}`, x - 12, h - 16);
+      }
+      ctx.fillStyle = "#b46b12";
+      ctx.fillRect(pad.l + 4, pad.t + 8, 10, 10);
+      ctx.fillStyle = "#60706a";
+      ctx.fillText("true active probability", pad.l + 19, pad.t + 18);
+      ctx.fillStyle = best.color;
+      ctx.fillRect(pad.l + 160, pad.t + 8, 10, 10);
+      ctx.fillStyle = "#60706a";
+      ctx.fillText(best.name.replace("Embedded ", "").replace("Jetson ", ""), pad.l + 175, pad.t + 18);
+      els.mapMeta.textContent = `${FIRST_MHZ + bestStart}-${FIRST_MHZ + bestStart + result.params.jamBw - 1} MHz selected`;
+    }
+
+    function renderAll(result) {
+      renderSummary(result);
+      renderTable(result);
+      drawLearningChart(result);
+      drawMapChart(result);
+    }
+
+    function runNow() {
+      syncControls();
+      els.runStatus.textContent = "Running";
+      window.setTimeout(() => {
+        const params = parseParams();
+        latest = runSimulation(params);
+        renderAll(latest);
+        els.runStatus.textContent = latest.bestLearner.pass || latest.bestLearner.finalPass ? "Candidate found" : "No candidate";
+      }, 20);
+    }
+
+    function resetDefaults() {
+      els.mapModel.value = "clustered";
+      els.activeBins.value = "24";
+      els.skew.value = "20";
+      els.changeSec.value = "0";
+      els.maxBw.value = "10";
+      els.jamBw.value = "10";
+      els.responseUs.value = "2500";
+      els.detectProb.value = "85";
+      els.falseProb.value = "3";
+      els.packets.value = "16000";
+      els.particles.value = "160";
+      els.seed.value = "2402";
+      runNow();
+    }
+
+    for (const el of [
+      els.mapModel,
+      els.activeBins,
+      els.skew,
+      els.changeSec,
+      els.maxBw,
+      els.jamBw,
+      els.responseUs,
+      els.detectProb,
+      els.falseProb,
+      els.packets,
+      els.particles,
+      els.seed
+    ]) {
+      el.addEventListener("input", syncControls);
+      el.addEventListener("change", runNow);
+    }
+
+    els.runBtn.addEventListener("click", runNow);
+    els.resetBtn.addEventListener("click", resetDefaults);
+    window.addEventListener("resize", () => {
+      if (latest) renderAll(latest);
+    });
+
+    syncControls();
+    runNow();
+  </script>
+</body>
+</html>

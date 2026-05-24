@@ -1,0 +1,1381 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Posterior Approximation Real-Time Simulator</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7f4;
+      --surface: #ffffff;
+      --surface-2: #edf2ee;
+      --ink: #17211d;
+      --muted: #60706a;
+      --border: #d7dfda;
+      --grid: #e7ece8;
+      --green: #168067;
+      --teal: #0f766e;
+      --blue: #315f9d;
+      --violet: #6d5fb3;
+      --amber: #b46b12;
+      --red: #b84035;
+      --shadow: 0 16px 42px rgba(23, 33, 29, 0.08);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      width: min(1540px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 22px 0 30px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 0 2px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.4rem, 2vw, 2.32rem);
+      line-height: 1.05;
+      letter-spacing: 0;
+      font-weight: 780;
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.96rem;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 38px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      color: var(--muted);
+      white-space: nowrap;
+      font-weight: 680;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(292px, 360px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+      margin-top: 18px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .controls {
+      position: sticky;
+      top: 14px;
+      padding: 14px;
+    }
+
+    .control-group {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .control-group:first-child {
+      padding-top: 0;
+    }
+
+    .control-group:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .group-title {
+      margin-bottom: 10px;
+      color: var(--ink);
+      font-size: 0.78rem;
+      font-weight: 780;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      margin: 12px 0;
+    }
+
+    .field:first-of-type {
+      margin-top: 0;
+    }
+
+    .label-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    output {
+      color: var(--ink);
+      font-weight: 720;
+      white-space: nowrap;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--green);
+    }
+
+    select,
+    input[type="number"] {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: #fbfcfb;
+      color: var(--ink);
+      padding: 7px 9px;
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .run-button,
+    .ghost-button {
+      min-height: 42px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-weight: 760;
+    }
+
+    .run-button {
+      background: var(--green);
+      color: #fff;
+      padding: 0 14px;
+    }
+
+    .ghost-button {
+      width: 44px;
+      background: var(--surface-2);
+      border-color: var(--border);
+      color: var(--ink);
+    }
+
+    .main {
+      display: grid;
+      gap: 18px;
+      min-width: 0;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric {
+      min-height: 112px;
+      padding: 15px;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 720;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .metric-value {
+      margin-top: 10px;
+      font-size: clamp(1.38rem, 2.2vw, 2.18rem);
+      line-height: 1;
+      font-weight: 820;
+      letter-spacing: 0;
+    }
+
+    .metric-sub {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.35;
+    }
+
+    .verdict {
+      padding: 13px 15px;
+      border-left: 5px solid var(--green);
+      color: var(--ink);
+      line-height: 1.45;
+    }
+
+    .verdict.warn {
+      border-left-color: var(--amber);
+    }
+
+    .verdict.fail {
+      border-left-color: var(--red);
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.18fr) minmax(360px, 0.82fr);
+      gap: 18px;
+    }
+
+    .chart-panel {
+      padding: 14px;
+      min-width: 0;
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 780;
+      letter-spacing: 0;
+    }
+
+    .panel-meta {
+      color: var(--muted);
+      font-size: 0.84rem;
+      white-space: nowrap;
+    }
+
+    canvas {
+      width: 100%;
+      display: block;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fbfcfb;
+    }
+
+    #learningChart,
+    #voteChart {
+      height: 390px;
+    }
+
+    .table-panel {
+      overflow: hidden;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1040px;
+      font-size: 0.91rem;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      background: var(--surface-2);
+      color: var(--muted);
+      text-align: left;
+      font-size: 0.76rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tbody td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    tbody tr.pass {
+      background: #dff3ed;
+    }
+
+    .algo-name {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      font-weight: 760;
+      white-space: nowrap;
+    }
+
+    .swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      flex: 0 0 auto;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 62px;
+      min-height: 25px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 780;
+    }
+
+    .badge.pass {
+      color: #0f5f4d;
+      background: #c9eadf;
+    }
+
+    .badge.miss {
+      color: #7d342d;
+      background: #f4d8d5;
+    }
+
+    .bar-track {
+      width: min(210px, 24vw);
+      height: 9px;
+      border-radius: 999px;
+      background: #e7ece8;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--green);
+    }
+
+    .footer-note {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.45;
+      padding: 0 2px;
+    }
+
+    @media (max-width: 1120px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        position: static;
+      }
+
+      .summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .chart-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .app {
+        width: min(100vw - 18px, 1540px);
+        padding-top: 12px;
+      }
+
+      .topbar,
+      .panel-head {
+        display: grid;
+      }
+
+      .summary {
+        grid-template-columns: 1fr;
+      }
+
+      .status-pill {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <h1>Posterior Approximation Real-Time Simulator</h1>
+        <div class="subtitle">Compares practical majority-vote approximations under response delay, noisy observations, and compute budgets</div>
+      </div>
+      <div class="status-pill" aria-live="polite"><span class="dot"></span><span id="runStatus">Ready</span></div>
+    </header>
+
+    <div class="layout">
+      <aside class="panel controls" aria-label="Simulation controls">
+        <div class="control-group">
+          <div class="group-title">Hop Scenario</div>
+          <label class="field">
+            <span class="label-row"><span>Sequence model</span></span>
+            <select id="sequenceModel">
+              <option value="structured" selected>Structured phase/stride</option>
+              <option value="afh">AFH remapped sequence</option>
+              <option value="drifting">Slow parameter drift</option>
+              <option value="random">Pseudo-random full band</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Active bins</span><output id="activeBinsOut">28</output></span>
+            <input id="activeBins" type="range" min="10" max="79" step="1" value="28">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Jitter</span><output id="jitterOut">2%</output></span>
+            <input id="jitterPct" type="range" min="0" max="25" step="1" value="2">
+          </label>
+        </div>
+
+        <div class="control-group">
+          <div class="group-title">Timing And RF</div>
+          <label class="field">
+            <span class="label-row"><span>Response time</span><output id="responseOut">1250 us</output></span>
+            <input id="responseUs" type="range" min="0" max="6000" step="125" value="1250">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Jamming bandwidth</span><output id="jamWidthOut">1 MHz</output></span>
+            <input id="jamWidth" type="range" min="1" max="10" step="1" value="1">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Detection probability</span><output id="detectOut">90%</output></span>
+            <input id="detectProb" type="range" min="20" max="100" step="1" value="90">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Wrong-bin reports</span><output id="wrongOut">2%</output></span>
+            <input id="wrongProb" type="range" min="0" max="25" step="1" value="2">
+          </label>
+        </div>
+
+        <div class="control-group">
+          <div class="group-title">Compute Budget</div>
+          <label class="field">
+            <span class="label-row"><span>Pretrain packets</span><output id="pretrainOut">1600</output></span>
+            <input id="pretrainPackets" type="range" min="0" max="9600" step="400" value="1600">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Beam hypotheses</span><output id="beamOut">96</output></span>
+            <input id="beamSize" type="range" min="16" max="512" step="16" value="96">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Jetson particles</span><output id="particlesOut">256</output></span>
+            <input id="particles" type="range" min="128" max="4096" step="128" value="256">
+          </label>
+        </div>
+
+        <div class="control-group">
+          <div class="group-title">Run</div>
+          <label class="field">
+            <span class="label-row"><span>Deployment packets</span><output id="packetOut">1600</output></span>
+            <input id="packets" type="range" min="1600" max="48000" step="1600" value="1600">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Seed</span></span>
+            <input id="seed" type="number" min="1" max="999999" step="1" value="40227">
+          </label>
+          <div class="button-row">
+            <button id="runBtn" class="run-button" type="button">Run real-time test</button>
+            <button id="resetBtn" class="ghost-button" type="button" title="Reset defaults" aria-label="Reset defaults">R</button>
+          </div>
+        </div>
+      </aside>
+
+      <section class="main">
+        <section class="summary" aria-label="Summary">
+          <div class="panel metric">
+            <div class="metric-label">Best approximation</div>
+            <div id="bestMetric" class="metric-value">-</div>
+            <div id="bestSub" class="metric-sub">-</div>
+          </div>
+          <div class="panel metric">
+            <div class="metric-label">Exact-hit rate</div>
+            <div id="exactMetric" class="metric-value">-</div>
+            <div id="exactSub" class="metric-sub">-</div>
+          </div>
+          <div class="panel metric">
+            <div class="metric-label">Response horizon</div>
+            <div id="horizonMetric" class="metric-value">-</div>
+            <div id="horizonSub" class="metric-sub">-</div>
+          </div>
+          <div class="panel metric">
+            <div class="metric-label">Compute estimate</div>
+            <div id="computeMetric" class="metric-value">-</div>
+            <div id="computeSub" class="metric-sub">-</div>
+          </div>
+        </section>
+
+        <div id="verdict" class="panel verdict">Run a scenario to compare bounded posterior approximations.</div>
+
+        <section class="chart-grid">
+          <div class="panel chart-panel">
+            <div class="panel-head">
+              <h2 class="panel-title">Real-Time Learning Curve</h2>
+              <div class="panel-meta">Rolling 1 second disruption rate</div>
+            </div>
+            <canvas id="learningChart" width="940" height="430" aria-label="Learning curve chart"></canvas>
+          </div>
+          <div class="panel chart-panel">
+            <div class="panel-head">
+              <h2 class="panel-title">Vote Confidence</h2>
+              <div id="voteMeta" class="panel-meta">Winning vote mass over time</div>
+            </div>
+            <canvas id="voteChart" width="620" height="430" aria-label="Vote confidence chart"></canvas>
+          </div>
+        </section>
+
+        <section class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Approximation</th>
+                  <th>Disrupted</th>
+                  <th>Exact hits</th>
+                  <th>Final 20%</th>
+                  <th>Goal</th>
+                  <th>Compute class</th>
+                  <th>Real-time note</th>
+                </tr>
+              </thead>
+              <tbody id="resultsBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="footer-note">
+          Posterior majority vote is approximated by bounded candidate sets. These learners receive only delayed/noisy observations and must schedule future jamming decisions before the target packet occurs.
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    "use strict";
+
+    const CHANNELS = 79;
+    const FIRST_MHZ = 2402;
+    const SLOT_US = 625;
+    const SLOTS_PER_SECOND = 1600;
+    const TARGET = 0.36;
+
+    const COLORS = {
+      topk: "#168067",
+      beam: "#315f9d",
+      jetson: "#c24f39",
+      active: "#b46b12",
+      random: "#747b84"
+    };
+
+    const ALGORITHMS = [
+      {
+        id: "topk",
+        name: "Top-K Phase/Stride Bank",
+        compute: "ESP32-class",
+        note: "Bounded phase/stride hypotheses; closest embedded version of posterior voting.",
+        make: params => makeTopKBank(params)
+      },
+      {
+        id: "beam",
+        name: "Beam Posterior Tracker",
+        compute: "Pi-class",
+        note: "Keeps a wider weighted beam with active-map and drift hypotheses.",
+        make: params => makeBeamTracker(params)
+      },
+      {
+        id: "jetson",
+        name: "Jetson Particle Posterior",
+        compute: "Jetson Nano",
+        note: "Larger particle set, richer mutations, resampling, and weighted majority vote.",
+        make: params => makeJetsonParticles(params)
+      },
+      {
+        id: "active",
+        name: "Active-Map Density",
+        compute: "Embedded baseline",
+        note: "Learns frequency density only; included to show the gap from sequence voting.",
+        make: () => makeActiveMapDensity()
+      },
+      {
+        id: "random",
+        name: "Random Window",
+        compute: "Baseline",
+        note: "Coverage-only baseline.",
+        make: params => makeRandomWindow(params.seed + 91)
+      }
+    ];
+
+    const els = {
+      sequenceModel: document.getElementById("sequenceModel"),
+      activeBins: document.getElementById("activeBins"),
+      jitterPct: document.getElementById("jitterPct"),
+      responseUs: document.getElementById("responseUs"),
+      jamWidth: document.getElementById("jamWidth"),
+      detectProb: document.getElementById("detectProb"),
+      wrongProb: document.getElementById("wrongProb"),
+      pretrainPackets: document.getElementById("pretrainPackets"),
+      beamSize: document.getElementById("beamSize"),
+      particles: document.getElementById("particles"),
+      packets: document.getElementById("packets"),
+      seed: document.getElementById("seed"),
+      runBtn: document.getElementById("runBtn"),
+      resetBtn: document.getElementById("resetBtn"),
+      activeBinsOut: document.getElementById("activeBinsOut"),
+      jitterOut: document.getElementById("jitterOut"),
+      responseOut: document.getElementById("responseOut"),
+      jamWidthOut: document.getElementById("jamWidthOut"),
+      detectOut: document.getElementById("detectOut"),
+      wrongOut: document.getElementById("wrongOut"),
+      pretrainOut: document.getElementById("pretrainOut"),
+      beamOut: document.getElementById("beamOut"),
+      particlesOut: document.getElementById("particlesOut"),
+      packetOut: document.getElementById("packetOut"),
+      runStatus: document.getElementById("runStatus"),
+      bestMetric: document.getElementById("bestMetric"),
+      bestSub: document.getElementById("bestSub"),
+      exactMetric: document.getElementById("exactMetric"),
+      exactSub: document.getElementById("exactSub"),
+      horizonMetric: document.getElementById("horizonMetric"),
+      horizonSub: document.getElementById("horizonSub"),
+      computeMetric: document.getElementById("computeMetric"),
+      computeSub: document.getElementById("computeSub"),
+      verdict: document.getElementById("verdict"),
+      learningChart: document.getElementById("learningChart"),
+      voteChart: document.getElementById("voteChart"),
+      voteMeta: document.getElementById("voteMeta"),
+      resultsBody: document.getElementById("resultsBody")
+    };
+
+    let latest = null;
+
+    function mulberry32(seed) {
+      let t = seed >>> 0;
+      return function next() {
+        t += 0x6D2B79F5;
+        let r = Math.imul(t ^ (t >>> 15), 1 | t);
+        r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+        return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function mod(value, base) {
+      return ((value % base) + base) % base;
+    }
+
+    function fmtInt(value) {
+      return Math.round(value).toLocaleString("en-US");
+    }
+
+    function fmtPct(value) {
+      return `${(value * 100).toFixed(1)}%`;
+    }
+
+    function responseProfile(responseUs) {
+      const exact = responseUs / SLOT_US;
+      const offset = Math.max(1, Math.ceil(exact));
+      const fractional = exact - Math.floor(exact);
+      const overlap = fractional === 0 ? 1 : 1 - fractional;
+      return { offset, overlap };
+    }
+
+    function centerToWindow(center, width) {
+      return clamp(Math.round(center - (width - 1) / 2), 0, CHANNELS - width);
+    }
+
+    function hitWindow(channel, start, width) {
+      return channel >= start && channel < start + width;
+    }
+
+    function windowCenter(start, width) {
+      return start + (width - 1) / 2;
+    }
+
+    function circularDistance(a, b) {
+      const d = Math.abs(a - b);
+      return Math.min(d, CHANNELS - d);
+    }
+
+    function parseParams() {
+      return {
+        sequenceModel: els.sequenceModel.value,
+        activeBins: Number(els.activeBins.value),
+        jitterPct: Number(els.jitterPct.value),
+        responseUs: Number(els.responseUs.value),
+        jamWidth: Number(els.jamWidth.value),
+        detectProb: Number(els.detectProb.value),
+        wrongProb: Number(els.wrongProb.value),
+        pretrainPackets: Number(els.pretrainPackets.value),
+        beamSize: Number(els.beamSize.value),
+        particles: Number(els.particles.value),
+        packets: Number(els.packets.value),
+        seed: clamp(Number(els.seed.value) || 1, 1, 999999)
+      };
+    }
+
+    function syncControls() {
+      els.activeBinsOut.textContent = els.activeBins.value;
+      els.jitterOut.textContent = `${els.jitterPct.value}%`;
+      els.responseOut.textContent = `${els.responseUs.value} us`;
+      els.jamWidthOut.textContent = `${els.jamWidth.value} MHz`;
+      els.detectOut.textContent = `${els.detectProb.value}%`;
+      els.wrongOut.textContent = `${els.wrongProb.value}%`;
+      els.pretrainOut.textContent = Number(els.pretrainPackets.value).toLocaleString("en-US");
+      els.beamOut.textContent = els.beamSize.value;
+      els.particlesOut.textContent = Number(els.particles.value).toLocaleString("en-US");
+      els.packetOut.textContent = Number(els.packets.value).toLocaleString("en-US");
+    }
+
+    function makeActiveSet(params) {
+      if (params.sequenceModel !== "afh") {
+        return Array.from({ length: CHANNELS }, (_, i) => i);
+      }
+      const start = Math.floor((CHANNELS - params.activeBins) / 2);
+      return Array.from({ length: params.activeBins }, (_, i) => start + i);
+    }
+
+    function remap(raw, active) {
+      return active[mod(raw, active.length)];
+    }
+
+    function generateHops(params) {
+      const rng = mulberry32(params.seed * 1103515245 + 12345);
+      const active = makeActiveSet(params);
+      const total = params.pretrainPackets + params.packets + 32;
+      const hops = new Int16Array(total);
+      let phase = Math.floor(rng() * CHANNELS);
+      let stride = 1 + Math.floor(rng() * (CHANNELS - 1));
+      let curve = params.sequenceModel === "structured" ? 0 : Math.floor(rng() * 5);
+
+      for (let t = 0; t < total; t++) {
+        if (params.sequenceModel === "random") {
+          hops[t] = Math.floor(rng() * CHANNELS);
+          continue;
+        }
+        if (params.sequenceModel === "drifting" && t > 0 && t % 2600 === 0) {
+          stride = mod(stride + (rng() < 0.5 ? -1 : 1), CHANNELS);
+          if (stride === 0) stride = 1;
+          curve = mod(curve + (rng() < 0.5 ? -1 : 1), 5);
+        }
+        let ch = mod(phase + stride * t + curve * t * t, CHANNELS);
+        if (params.sequenceModel === "afh") ch = remap(ch, active);
+        if (rng() < params.jitterPct / 100) ch = Math.floor(rng() * CHANNELS);
+        hops[t] = ch;
+      }
+
+      return { hops, active, truth: { phase, stride, curve } };
+    }
+
+    function generateObservations(hops, params) {
+      const rng = mulberry32(params.seed * 9871 + 55);
+      const observations = new Int16Array(hops.length);
+      observations.fill(-1);
+      for (let t = 0; t < hops.length; t++) {
+        if (rng() > params.detectProb / 100) continue;
+        let obs = hops[t];
+        if (rng() < params.wrongProb / 100) {
+          obs = mod(obs + 1 + Math.floor(rng() * (CHANNELS - 1)), CHANNELS);
+        }
+        observations[t] = obs;
+      }
+      return observations;
+    }
+
+    function predictCandidate(c, t, active) {
+      const raw = mod(c.phase + c.stride * t + c.curve * t * t, CHANNELS);
+      return c.remap ? remap(raw, active) : raw;
+    }
+
+    function voteWindow(candidates, t, width, active, limit) {
+      const votes = new Float32Array(CHANNELS);
+      let total = 0;
+      const n = Math.min(limit || candidates.length, candidates.length);
+      for (let i = 0; i < n; i++) {
+        const c = candidates[i];
+        if (c.weight <= 0) continue;
+        const ch = predictCandidate(c, t, active);
+        votes[ch] += c.weight;
+        total += c.weight;
+      }
+      let bestCh = 0;
+      for (let ch = 1; ch < CHANNELS; ch++) {
+        if (votes[ch] > votes[bestCh]) bestCh = ch;
+      }
+      return {
+        start: centerToWindow(bestCh, width),
+        confidence: total > 0 ? votes[bestCh] / total : 0,
+        predicted: bestCh
+      };
+    }
+
+    function normalizeAndSort(candidates, keep) {
+      candidates.sort((a, b) => b.weight - a.weight);
+      const cut = keep ? candidates.slice(0, keep) : candidates;
+      let total = 0;
+      for (const c of cut) total += c.weight;
+      if (total <= 0 || !Number.isFinite(total)) {
+        const even = 1 / cut.length;
+        for (const c of cut) c.weight = even;
+      } else {
+        for (const c of cut) c.weight /= total;
+      }
+      return cut;
+    }
+
+    function makeCandidate(seed, allowRemap) {
+      const rng = mulberry32(seed);
+      return {
+        phase: Math.floor(rng() * CHANNELS),
+        stride: 1 + Math.floor(rng() * (CHANNELS - 1)),
+        curve: Math.floor(rng() * 5),
+        remap: allowRemap && rng() < 0.6,
+        weight: 1
+      };
+    }
+
+    function mutateCandidate(parent, rng, strong) {
+      const radius = strong ? 9 : 3;
+      let stride = mod(parent.stride + Math.floor(rng() * (2 * radius + 1)) - radius, CHANNELS);
+      if (stride === 0) stride = 1;
+      return {
+        phase: mod(parent.phase + Math.floor(rng() * (2 * radius + 1)) - radius, CHANNELS),
+        stride,
+        curve: mod(parent.curve + Math.floor(rng() * 3) - 1, 5),
+        remap: rng() < 0.08 ? !parent.remap : parent.remap,
+        weight: parent.weight
+      };
+    }
+
+    function scoreCandidate(c, t, obs, active, wrongProb) {
+      if (obs < 0) return 1;
+      const predicted = predictCandidate(c, t, active);
+      const dist = circularDistance(predicted, obs);
+      if (dist === 0) return 1.65;
+      if (dist === 1) return 0.92;
+      if (wrongProb > 0) return 0.18;
+      return 0.04;
+    }
+
+    function makeTopKBank(params) {
+      const candidates = [];
+      const maxCurve = params.sequenceModel === "structured" ? 1 : 3;
+      for (let phase = 0; phase < CHANNELS; phase++) {
+        for (let stride = 1; stride < CHANNELS; stride++) {
+          for (let curve = 0; curve < maxCurve; curve++) {
+            candidates.push({ phase, stride, curve, remap: params.sequenceModel === "afh", weight: 1 });
+          }
+        }
+      }
+      normalizeAndSort(candidates);
+      return {
+        predict(t, width, data) {
+          return voteWindow(candidates, t, width, data.active, params.beamSize);
+        },
+        observe(t, obs, data) {
+          for (const c of candidates) c.weight *= scoreCandidate(c, t, obs, data.active, params.wrongProb);
+          normalizeAndSort(candidates);
+        }
+      };
+    }
+
+    function makeBeamTracker(params) {
+      const rng = mulberry32(params.seed * 333667 + 21);
+      let candidates = [];
+      for (let i = 0; i < params.beamSize * 4; i++) {
+        candidates.push(makeCandidate(params.seed + i * 97, true));
+      }
+      candidates = normalizeAndSort(candidates, params.beamSize);
+
+      function diversify() {
+        const next = candidates.slice(0, Math.ceil(params.beamSize * 0.65));
+        while (next.length < params.beamSize) {
+          const parent = candidates[Math.floor(rng() * Math.max(1, candidates.length * 0.35))];
+          next.push(mutateCandidate(parent, rng, rng() < 0.25));
+        }
+        candidates = normalizeAndSort(next, params.beamSize);
+      }
+
+      return {
+        predict(t, width, data) {
+          return voteWindow(candidates, t, width, data.active, candidates.length);
+        },
+        observe(t, obs, data) {
+          for (const c of candidates) c.weight *= scoreCandidate(c, t, obs, data.active, params.wrongProb);
+          candidates = normalizeAndSort(candidates, params.beamSize);
+          if (t > 0 && t % 160 === 0) diversify();
+        }
+      };
+    }
+
+    function makeJetsonParticles(params) {
+      const rng = mulberry32(params.seed * 776531 + 33);
+      let particles = [];
+      for (let i = 0; i < params.particles; i++) particles.push(makeCandidate(params.seed + i * 131, true));
+      particles = normalizeAndSort(particles);
+
+      function resample() {
+        const cumulative = [];
+        let total = 0;
+        for (const p of particles) {
+          total += p.weight;
+          cumulative.push(total);
+        }
+        const next = [];
+        const elite = Math.max(8, Math.floor(params.particles * 0.04));
+        particles.sort((a, b) => b.weight - a.weight);
+        for (let i = 0; i < elite; i++) next.push({ ...particles[i] });
+        while (next.length < params.particles) {
+          const pick = rng() * Math.max(total, 0.000001);
+          let idx = 0;
+          while (idx < cumulative.length - 1 && cumulative[idx] < pick) idx++;
+          const parent = particles[idx] || particles[0];
+          next.push(rng() < 0.18 ? makeCandidate(params.seed + Math.floor(rng() * 999999), true) : mutateCandidate(parent, rng, rng() < 0.35));
+        }
+        particles = normalizeAndSort(next);
+      }
+
+      return {
+        predict(t, width, data) {
+          return voteWindow(particles, t, width, data.active, particles.length);
+        },
+        observe(t, obs, data) {
+          for (const p of particles) p.weight *= scoreCandidate(p, t, obs, data.active, params.wrongProb);
+          particles = normalizeAndSort(particles);
+          if (t > 0 && t % 96 === 0) resample();
+        }
+      };
+    }
+
+    function makeActiveMapDensity() {
+      const weights = new Float32Array(CHANNELS);
+      weights.fill(0.05);
+      return {
+        predict(t, width) {
+          let bestStart = 0;
+          let bestScore = -1;
+          for (let start = 0; start <= CHANNELS - width; start++) {
+            let score = 0;
+            for (let i = 0; i < width; i++) score += weights[start + i];
+            if (score > bestScore) {
+              bestScore = score;
+              bestStart = start;
+            }
+          }
+          return { start: bestStart, confidence: bestScore / Math.max(0.0001, weights.reduce((a, b) => a + b, 0)), predicted: Math.round(windowCenter(bestStart, width)) };
+        },
+        observe(t, obs) {
+          if (t % 80 === 0) {
+            for (let i = 0; i < CHANNELS; i++) weights[i] *= 0.992;
+          }
+          if (obs >= 0) weights[obs] += 1;
+        }
+      };
+    }
+
+    function makeRandomWindow(seed) {
+      const rng = mulberry32(seed);
+      return {
+        predict(t, width) {
+          const start = Math.floor(rng() * (CHANNELS - width + 1));
+          return { start, confidence: width / CHANNELS, predicted: Math.round(windowCenter(start, width)) };
+        },
+        observe() {}
+      };
+    }
+
+    function rollingRate(series, window) {
+      const out = new Float32Array(series.length);
+      let sum = 0;
+      for (let i = 0; i < series.length; i++) {
+        sum += series[i];
+        if (i >= window) sum -= series[i - window];
+        out[i] = sum / Math.min(window, i + 1);
+      }
+      return out;
+    }
+
+    function runAlgorithm(def, params, data) {
+      const algo = def.make(params);
+      const profile = responseProfile(params.responseUs);
+      const width = params.jamWidth;
+      const hitSeries = new Float32Array(params.packets);
+      const confidenceSeries = new Float32Array(params.packets);
+      const trace = [];
+      let disrupted = 0;
+      let exactHits = 0;
+      let finalDisrupted = 0;
+      let finalExact = 0;
+      const finalStart = Math.floor(params.packets * 0.8);
+
+      for (let t = 0; t < params.pretrainPackets; t++) {
+        algo.observe(t, data.observations[t], data);
+      }
+
+      for (let i = 0; i < params.packets; i++) {
+        const decisionT = params.pretrainPackets + i;
+        const targetT = decisionT + profile.offset;
+        const prediction = algo.predict(targetT, width, data);
+        const actual = data.hops[targetT];
+        const hit = hitWindow(actual, prediction.start, width);
+        const exact = Math.round(prediction.predicted) === actual;
+        const value = hit ? profile.overlap : 0;
+
+        disrupted += value;
+        if (exact) exactHits += 1;
+        hitSeries[i] = value;
+        confidenceSeries[i] = prediction.confidence || 0;
+        if (i >= finalStart) {
+          finalDisrupted += value;
+          if (exact) finalExact += 1;
+        }
+        if (trace.length < 420) trace.push({ i, actual, start: prediction.start, hit, exact, confidence: prediction.confidence || 0 });
+        algo.observe(decisionT, data.observations[decisionT], data);
+      }
+
+      const rolling = rollingRate(hitSeries, SLOTS_PER_SECOND);
+      const confidenceRolling = rollingRate(confidenceSeries, 160);
+      const finalPackets = Math.max(1, params.packets - finalStart);
+      return {
+        id: def.id,
+        name: def.name,
+        color: COLORS[def.id],
+        compute: def.compute,
+        note: def.note,
+        disrupted,
+        disruptedPackets: Math.round(disrupted),
+        rate: disrupted / params.packets,
+        exactRate: exactHits / params.packets,
+        finalRate: finalDisrupted / finalPackets,
+        finalExactRate: finalExact / finalPackets,
+        pass: disrupted / params.packets >= TARGET,
+        rolling,
+        confidenceRolling,
+        trace
+      };
+    }
+
+    function runSimulation(params) {
+      const data = generateHops(params);
+      data.observations = generateObservations(data.hops, params);
+      const results = ALGORITHMS.map(def => runAlgorithm(def, params, data));
+      const sorted = [...results].sort((a, b) => b.rate - a.rate);
+      const bestApprox = sorted.find(row => ["topk", "beam", "jetson"].includes(row.id));
+      return { params, data, results, sorted, bestApprox };
+    }
+
+    function renderSummary(result) {
+      const p = result.params;
+      const best = result.bestApprox;
+      const profile = responseProfile(p.responseUs);
+      els.bestMetric.textContent = best.name.replace(" Posterior", "");
+      els.bestSub.textContent = `${fmtPct(best.rate)} disrupted, ${fmtPct(best.finalRate)} final`;
+      els.exactMetric.textContent = fmtPct(best.exactRate);
+      els.exactSub.textContent = `${fmtPct(best.finalExactRate)} exact in final 20%`;
+      els.horizonMetric.textContent = `${profile.offset} slot${profile.offset === 1 ? "" : "s"}`;
+      els.horizonSub.textContent = `${Math.round(profile.overlap * 100)}% overlap at ${p.responseUs} us response`;
+      els.computeMetric.textContent = best.compute;
+      els.computeSub.textContent = best.id === "jetson" ? `${fmtInt(p.particles)} particles` : `${fmtInt(p.beamSize)} beam slots`;
+
+      let cls = "panel verdict";
+      let text = "";
+      if (p.sequenceModel === "random") {
+        cls += " fail";
+        text = `The best posterior approximation reaches ${fmtPct(best.rate)}. This is expected: a pseudo-random full-band stream has no recoverable future-hop structure, so majority voting cannot beat the information limit by much.`;
+      } else if (best.pass) {
+        text = `${best.name} meets the 36% target in this scenario. This is the closest practical cousin of Posterior Majority Vote under the selected compute and response-time budget.`;
+      } else {
+        cls += " warn";
+        text = `${best.name} is strongest here but only reaches ${fmtPct(best.rate)}. Try more pretraining, more particles, lower response time, wider bandwidth, or a less noisy detector.`;
+      }
+      els.verdict.className = cls;
+      els.verdict.textContent = text;
+    }
+
+    function renderTable(result) {
+      const rows = result.sorted.map(row => {
+        const badgeClass = row.pass ? "pass" : "miss";
+        const badgeText = row.pass ? "Meets" : "Misses";
+        return `
+          <tr class="${row.pass ? "pass" : ""}">
+            <td><span class="algo-name"><span class="swatch" style="background:${row.color}"></span>${row.name}</span></td>
+            <td>${fmtInt(row.disruptedPackets)} / ${fmtInt(result.params.packets)}</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div class="bar-track"><div class="bar-fill" style="width:${Math.min(100, row.exactRate * 100).toFixed(2)}%;background:${row.color}"></div></div>
+                <strong>${fmtPct(row.exactRate)}</strong>
+              </div>
+            </td>
+            <td>${fmtPct(row.finalRate)} disrupted, ${fmtPct(row.finalExactRate)} exact</td>
+            <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+            <td>${row.compute}</td>
+            <td>${row.note}</td>
+          </tr>
+        `;
+      }).join("");
+      els.resultsBody.innerHTML = rows;
+    }
+
+    function setupCanvas(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.round(rect.width * dpr));
+      canvas.height = Math.max(1, Math.round(rect.height * dpr));
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { ctx, w: rect.width, h: rect.height };
+    }
+
+    function sample(series) {
+      const out = [];
+      const step = Math.max(1, Math.floor(series.length / 120));
+      for (let i = 0; i < series.length; i += step) out.push(series[i]);
+      return out;
+    }
+
+    function drawLearningChart(result) {
+      const { ctx, w, h } = setupCanvas(els.learningChart);
+      ctx.clearRect(0, 0, w, h);
+      const pad = { l: 54, r: 16, t: 18, b: 42 };
+      const innerW = w - pad.l - pad.r;
+      const innerH = h - pad.t - pad.b;
+      const maxY = Math.max(0.55, ...result.results.flatMap(row => sample(row.rolling))) * 1.05;
+      const maxSeconds = result.params.packets / SLOTS_PER_SECOND;
+
+      ctx.fillStyle = "#fbfcfb";
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = "#d7dfda";
+      ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+
+      ctx.font = "12px Inter, Segoe UI, sans-serif";
+      ctx.fillStyle = "#60706a";
+      ctx.strokeStyle = "#e7ece8";
+      for (let i = 0; i <= 5; i++) {
+        const value = maxY * i / 5;
+        const y = pad.t + innerH - (value / maxY) * innerH;
+        ctx.beginPath();
+        ctx.moveTo(pad.l, y);
+        ctx.lineTo(w - pad.r, y);
+        ctx.stroke();
+        ctx.fillText(`${Math.round(value * 100)}%`, 8, y + 4);
+      }
+
+      const targetY = pad.t + innerH - (TARGET / maxY) * innerH;
+      ctx.strokeStyle = "#168067";
+      ctx.setLineDash([6, 5]);
+      ctx.beginPath();
+      ctx.moveTo(pad.l, targetY);
+      ctx.lineTo(w - pad.r, targetY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#168067";
+      ctx.fillText("36%", pad.l + 6, targetY - 6);
+
+      for (const row of result.results) {
+        ctx.strokeStyle = row.color;
+        ctx.lineWidth = row.id === result.bestApprox.id ? 3 : 1.7;
+        ctx.beginPath();
+        const step = Math.max(1, Math.floor(row.rolling.length / 520));
+        let first = true;
+        for (let i = 0; i < row.rolling.length; i += step) {
+          const x = pad.l + (i / Math.max(1, row.rolling.length - 1)) * innerW;
+          const y = pad.t + innerH - (row.rolling[i] / maxY) * innerH;
+          if (first) {
+            ctx.moveTo(x, y);
+            first = false;
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = "#60706a";
+      for (let sec = 0; sec <= maxSeconds; sec += Math.max(1, Math.round(maxSeconds / 5))) {
+        const x = pad.l + (sec / maxSeconds) * innerW;
+        ctx.fillText(`${sec}s`, x - 8, h - 16);
+      }
+      drawLegend(ctx, result.results, pad.l + 4, pad.t + 8, w - pad.r - 8);
+    }
+
+    function drawVoteChart(result) {
+      const { ctx, w, h } = setupCanvas(els.voteChart);
+      ctx.clearRect(0, 0, w, h);
+      const pad = { l: 54, r: 16, t: 18, b: 42 };
+      const innerW = w - pad.l - pad.r;
+      const innerH = h - pad.t - pad.b;
+      const rows = result.results.filter(row => ["topk", "beam", "jetson"].includes(row.id));
+
+      ctx.fillStyle = "#fbfcfb";
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = "#d7dfda";
+      ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+
+      ctx.font = "12px Inter, Segoe UI, sans-serif";
+      ctx.fillStyle = "#60706a";
+      ctx.strokeStyle = "#e7ece8";
+      for (let i = 0; i <= 5; i++) {
+        const y = pad.t + innerH - (i / 5) * innerH;
+        ctx.beginPath();
+        ctx.moveTo(pad.l, y);
+        ctx.lineTo(w - pad.r, y);
+        ctx.stroke();
+        ctx.fillText(`${i * 20}%`, 8, y + 4);
+      }
+
+      for (const row of rows) {
+        ctx.strokeStyle = row.color;
+        ctx.lineWidth = row.id === result.bestApprox.id ? 3 : 1.8;
+        ctx.beginPath();
+        const step = Math.max(1, Math.floor(row.confidenceRolling.length / 420));
+        let first = true;
+        for (let i = 0; i < row.confidenceRolling.length; i += step) {
+          const x = pad.l + (i / Math.max(1, row.confidenceRolling.length - 1)) * innerW;
+          const y = pad.t + innerH - clamp(row.confidenceRolling[i], 0, 1) * innerH;
+          if (first) {
+            ctx.moveTo(x, y);
+            first = false;
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.stroke();
+      }
+      drawLegend(ctx, rows, pad.l + 4, pad.t + 8, w - pad.r - 8);
+      els.voteMeta.textContent = `${result.bestApprox.name} selected`;
+    }
+
+    function drawLegend(ctx, rows, x, y, maxX) {
+      ctx.font = "12px Inter, Segoe UI, sans-serif";
+      let cursorX = x;
+      let cursorY = y;
+      for (const row of rows) {
+        const label = row.name.replace(" Posterior", "").replace("Phase/Stride ", "");
+        const width = ctx.measureText(label).width + 28;
+        if (cursorX + width > maxX) {
+          cursorX = x;
+          cursorY += 20;
+        }
+        ctx.fillStyle = row.color;
+        ctx.fillRect(cursorX, cursorY - 9, 10, 10);
+        ctx.fillStyle = "#60706a";
+        ctx.fillText(label, cursorX + 15, cursorY);
+        cursorX += width;
+      }
+    }
+
+    function renderAll(result) {
+      renderSummary(result);
+      renderTable(result);
+      drawLearningChart(result);
+      drawVoteChart(result);
+    }
+
+    function runNow() {
+      syncControls();
+      els.runStatus.textContent = "Running";
+      window.setTimeout(() => {
+        const params = parseParams();
+        latest = runSimulation(params);
+        renderAll(latest);
+        els.runStatus.textContent = latest.bestApprox.pass ? "Candidate found" : "Below target";
+      }, 20);
+    }
+
+    function resetDefaults() {
+      els.sequenceModel.value = "structured";
+      els.activeBins.value = "28";
+      els.jitterPct.value = "2";
+      els.responseUs.value = "1250";
+      els.jamWidth.value = "1";
+      els.detectProb.value = "90";
+      els.wrongProb.value = "2";
+      els.pretrainPackets.value = "1600";
+      els.beamSize.value = "96";
+      els.particles.value = "256";
+      els.packets.value = "1600";
+      els.seed.value = "40227";
+      runNow();
+    }
+
+    for (const el of [
+      els.sequenceModel,
+      els.activeBins,
+      els.jitterPct,
+      els.responseUs,
+      els.jamWidth,
+      els.detectProb,
+      els.wrongProb,
+      els.pretrainPackets,
+      els.beamSize,
+      els.particles,
+      els.packets,
+      els.seed
+    ]) {
+      el.addEventListener("input", syncControls);
+      el.addEventListener("change", runNow);
+    }
+
+    els.runBtn.addEventListener("click", runNow);
+    els.resetBtn.addEventListener("click", resetDefaults);
+    window.addEventListener("resize", () => {
+      if (latest) renderAll(latest);
+    });
+
+    syncControls();
+    runNow();
+  </script>
+</body>
+</html>

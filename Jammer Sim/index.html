@@ -1,0 +1,1384 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bluetooth Follower / Estimation Jammer Simulator</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7f4;
+      --surface: #ffffff;
+      --surface-2: #eef3ef;
+      --ink: #17211d;
+      --muted: #60706a;
+      --border: #d7dfda;
+      --grid: #e7ece8;
+      --green: #168067;
+      --green-2: #dff3ed;
+      --blue: #315f9d;
+      --amber: #b46b12;
+      --red: #b84035;
+      --shadow: 0 16px 42px rgba(23, 33, 29, 0.08);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      width: min(1520px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 22px 0 28px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 0 2px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.4rem, 2vw, 2.35rem);
+      line-height: 1.05;
+      letter-spacing: 0;
+      font-weight: 760;
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.96rem;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 38px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      color: var(--muted);
+      white-space: nowrap;
+      font-weight: 650;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(285px, 350px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+      margin-top: 18px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .controls {
+      position: sticky;
+      top: 14px;
+      padding: 14px;
+    }
+
+    .control-group {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .control-group:first-child {
+      padding-top: 0;
+    }
+
+    .control-group:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .group-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 10px;
+      color: var(--ink);
+      font-size: 0.78rem;
+      font-weight: 780;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      margin: 12px 0;
+    }
+
+    .field:first-of-type {
+      margin-top: 0;
+    }
+
+    .label-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    output {
+      color: var(--ink);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--green);
+    }
+
+    select,
+    input[type="number"] {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: #fbfcfb;
+      color: var(--ink);
+      padding: 7px 9px;
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .run-button,
+    .ghost-button {
+      min-height: 42px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-weight: 760;
+    }
+
+    .run-button {
+      background: var(--green);
+      color: #fff;
+      padding: 0 14px;
+    }
+
+    .run-button:active,
+    .ghost-button:active {
+      transform: translateY(1px);
+    }
+
+    .ghost-button {
+      width: 44px;
+      background: var(--surface-2);
+      border-color: var(--border);
+      color: var(--ink);
+    }
+
+    .main {
+      display: grid;
+      gap: 18px;
+      min-width: 0;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric {
+      padding: 15px;
+      min-height: 104px;
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .metric-value {
+      margin-top: 10px;
+      font-size: clamp(1.45rem, 2.4vw, 2.3rem);
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .metric-sub {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.35;
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.36fr) minmax(320px, 0.64fr);
+      gap: 18px;
+    }
+
+    .chart-panel {
+      padding: 14px;
+      min-width: 0;
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 780;
+      letter-spacing: 0;
+    }
+
+    .panel-meta {
+      color: var(--muted);
+      font-size: 0.84rem;
+      white-space: nowrap;
+    }
+
+    canvas {
+      width: 100%;
+      display: block;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fbfcfb;
+    }
+
+    #responseChart {
+      height: 390px;
+    }
+
+    #bandChart {
+      height: 390px;
+    }
+
+    .table-panel {
+      overflow: hidden;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 820px;
+      font-size: 0.92rem;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      background: var(--surface-2);
+      color: var(--muted);
+      text-align: left;
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    tbody td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    tbody tr.pass {
+      background: var(--green-2);
+    }
+
+    .algo-name {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      font-weight: 760;
+      white-space: nowrap;
+    }
+
+    .swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      flex: 0 0 auto;
+    }
+
+    .pass-badge,
+    .miss-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 58px;
+      min-height: 25px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 780;
+    }
+
+    .pass-badge {
+      color: #0f5f4d;
+      background: #c9eadf;
+    }
+
+    .miss-badge {
+      color: #7d342d;
+      background: #f4d8d5;
+    }
+
+    .bar-track {
+      width: min(220px, 26vw);
+      height: 9px;
+      border-radius: 999px;
+      background: #e7ece8;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: var(--green);
+    }
+
+    .footer-note {
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1.45;
+      padding: 12px 2px 0;
+    }
+
+    @media (max-width: 1100px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        position: static;
+      }
+
+      .summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .chart-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .app {
+        width: min(100vw - 18px, 1520px);
+        padding-top: 12px;
+      }
+
+      .topbar {
+        display: grid;
+      }
+
+      .status-pill {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .summary {
+        grid-template-columns: 1fr;
+      }
+
+      .chart-panel {
+        padding: 10px;
+      }
+
+      .panel-head {
+        display: grid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <h1>Follower / Estimation Jammer Simulator</h1>
+        <div class="subtitle">One Bluetooth connection, 79 hop bins, 2.402-2.480 GHz, 625 us slots</div>
+      </div>
+      <div class="status-pill" aria-live="polite"><span class="dot"></span><span id="runStatus">Ready</span></div>
+    </header>
+
+    <div class="layout">
+      <aside class="panel controls" aria-label="Simulation controls">
+        <div class="control-group">
+          <div class="group-title">Connection</div>
+          <label class="field">
+            <span class="label-row"><span>Hop model</span></span>
+            <select id="hopModel">
+              <option value="classic">Classic pseudo-random</option>
+              <option value="afhCluster" selected>AFH clustered active map</option>
+              <option value="afhScattered">AFH scattered active map</option>
+              <option value="stride">Hidden stride with jitter</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Active bins</span><output id="activeBinsOut">26</output></span>
+            <input id="activeBins" type="range" min="20" max="79" step="1" value="26">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Jitter</span><output id="jitterOut">2%</output></span>
+            <input id="jitter" type="range" min="0" max="30" step="1" value="2">
+          </label>
+        </div>
+
+        <div class="control-group">
+          <div class="group-title">Jammer</div>
+          <label class="field">
+            <span class="label-row"><span>Max bandwidth</span><output id="maxBwOut">10 MHz</output></span>
+            <input id="maxBw" type="range" min="1" max="20" step="1" value="10">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Used bandwidth</span><output id="jamBwOut">10 MHz</output></span>
+            <input id="jamBw" type="range" min="1" max="10" step="1" value="10">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Response time</span><output id="responseOut">1250 us</output></span>
+            <input id="responseUs" type="range" min="0" max="6000" step="125" value="1250">
+          </label>
+        </div>
+
+        <div class="control-group">
+          <div class="group-title">Detector</div>
+          <label class="field">
+            <span class="label-row"><span>Detection probability</span><output id="detectOut">90%</output></span>
+            <input id="detectProb" type="range" min="0" max="100" step="1" value="90">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Wrong-bin reports</span><output id="falseOut">2%</output></span>
+            <input id="falseProb" type="range" min="0" max="30" step="1" value="2">
+          </label>
+        </div>
+
+        <div class="control-group">
+          <div class="group-title">Run</div>
+          <label class="field">
+            <span class="label-row"><span>Packets</span><output id="packetOut">12800</output></span>
+            <input id="packets" type="range" min="1600" max="48000" step="1600" value="12800">
+          </label>
+          <label class="field">
+            <span class="label-row"><span>Seed</span></span>
+            <input id="seed" type="number" min="1" max="999999" step="1" value="402">
+          </label>
+          <div class="button-row">
+            <button id="runBtn" class="run-button" type="button">Run simulation</button>
+            <button id="resetBtn" class="ghost-button" type="button" title="Reset defaults" aria-label="Reset defaults">↺</button>
+          </div>
+        </div>
+      </aside>
+
+      <section class="main">
+        <section class="summary" aria-label="Summary">
+          <div class="panel metric">
+            <div class="metric-label">Best algorithm</div>
+            <div id="bestAlgo" class="metric-value">-</div>
+            <div id="bestAlgoSub" class="metric-sub">-</div>
+          </div>
+          <div class="panel metric">
+            <div class="metric-label">Disrupted packets</div>
+            <div id="bestPackets" class="metric-value">-</div>
+            <div id="bestPacketsSub" class="metric-sub">Goal: 36%</div>
+          </div>
+          <div class="panel metric">
+            <div class="metric-label">Response offset</div>
+            <div id="slotOffset" class="metric-value">-</div>
+            <div id="slotOffsetSub" class="metric-sub">-</div>
+          </div>
+          <div class="panel metric">
+            <div class="metric-label">Bandwidth</div>
+            <div id="bandwidthMetric" class="metric-value">-</div>
+            <div id="bandwidthSub" class="metric-sub">-</div>
+          </div>
+        </section>
+
+        <section class="chart-grid">
+          <div class="panel chart-panel">
+            <div class="panel-head">
+              <h2 class="panel-title">Response-Time Sweep</h2>
+              <div class="panel-meta">Disruption percentage by algorithm</div>
+            </div>
+            <canvas id="responseChart" width="980" height="430" aria-label="Response sweep chart"></canvas>
+          </div>
+          <div class="panel chart-panel">
+            <div class="panel-head">
+              <h2 class="panel-title">Jam Band Snapshot</h2>
+              <div class="panel-meta" id="snapshotMeta">Selected response</div>
+            </div>
+            <canvas id="bandChart" width="520" height="430" aria-label="Jam band snapshot"></canvas>
+          </div>
+        </section>
+
+        <section class="panel table-panel">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Algorithm</th>
+                  <th>Disrupted</th>
+                  <th>Disruption</th>
+                  <th>Goal</th>
+                  <th>Correct band</th>
+                  <th>Mean error</th>
+                  <th>Use case</th>
+                </tr>
+              </thead>
+              <tbody id="resultsBody"></tbody>
+            </table>
+          </div>
+        </section>
+        <div class="footer-note">
+          The simulator compares estimation behavior under adjustable assumptions. In the pseudo-random model, results near the bandwidth fraction are expected because previous bins do not reveal future bins.
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    "use strict";
+
+    const CHANNELS = 79;
+    const FIRST_MHZ = 2402;
+    const SLOT_US = 625;
+    const TARGET = 0.36;
+
+    const COLORS = {
+      random: "#747b84",
+      sweep: "#315f9d",
+      last: "#b46b12",
+      stride: "#7a5cbd",
+      markov: "#c24f39",
+      active: "#168067",
+      hybrid: "#0f766e"
+    };
+
+    const ALGO_DEFS = [
+      {
+        id: "random",
+        name: "Random Window",
+        use: "Baseline coverage",
+        make: (seed) => makeRandomWindow(seed)
+      },
+      {
+        id: "sweep",
+        name: "Linear Sweep",
+        use: "Hardware scan baseline",
+        make: () => makeSweepWindow()
+      },
+      {
+        id: "last",
+        name: "Last-Bin Follower",
+        use: "Very low delay",
+        make: () => makeLastFollower()
+      },
+      {
+        id: "stride",
+        name: "Stride Estimator",
+        use: "Repeating hop structure",
+        make: () => makeStrideEstimator()
+      },
+      {
+        id: "markov",
+        name: "Markov Tracker",
+        use: "Repeated transitions",
+        make: () => makeMarkovTracker()
+      },
+      {
+        id: "active",
+        name: "Active-Map Density",
+        use: "AFH channel clustering",
+        make: () => makeActiveMapDensity()
+      },
+      {
+        id: "hybrid",
+        name: "Hybrid Estimator",
+        use: "Switches by confidence",
+        make: () => makeHybridEstimator()
+      }
+    ];
+
+    const els = {
+      hopModel: document.getElementById("hopModel"),
+      activeBins: document.getElementById("activeBins"),
+      jitter: document.getElementById("jitter"),
+      maxBw: document.getElementById("maxBw"),
+      jamBw: document.getElementById("jamBw"),
+      responseUs: document.getElementById("responseUs"),
+      detectProb: document.getElementById("detectProb"),
+      falseProb: document.getElementById("falseProb"),
+      packets: document.getElementById("packets"),
+      seed: document.getElementById("seed"),
+      runBtn: document.getElementById("runBtn"),
+      resetBtn: document.getElementById("resetBtn"),
+      activeBinsOut: document.getElementById("activeBinsOut"),
+      jitterOut: document.getElementById("jitterOut"),
+      maxBwOut: document.getElementById("maxBwOut"),
+      jamBwOut: document.getElementById("jamBwOut"),
+      responseOut: document.getElementById("responseOut"),
+      detectOut: document.getElementById("detectOut"),
+      falseOut: document.getElementById("falseOut"),
+      packetOut: document.getElementById("packetOut"),
+      runStatus: document.getElementById("runStatus"),
+      bestAlgo: document.getElementById("bestAlgo"),
+      bestAlgoSub: document.getElementById("bestAlgoSub"),
+      bestPackets: document.getElementById("bestPackets"),
+      bestPacketsSub: document.getElementById("bestPacketsSub"),
+      slotOffset: document.getElementById("slotOffset"),
+      slotOffsetSub: document.getElementById("slotOffsetSub"),
+      bandwidthMetric: document.getElementById("bandwidthMetric"),
+      bandwidthSub: document.getElementById("bandwidthSub"),
+      resultsBody: document.getElementById("resultsBody"),
+      responseChart: document.getElementById("responseChart"),
+      bandChart: document.getElementById("bandChart"),
+      snapshotMeta: document.getElementById("snapshotMeta")
+    };
+
+    let latest = null;
+
+    function mulberry32(seed) {
+      let t = seed >>> 0;
+      return function next() {
+        t += 0x6D2B79F5;
+        let r = Math.imul(t ^ (t >>> 15), 1 | t);
+        r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+        return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function mod(value, base) {
+      return ((value % base) + base) % base;
+    }
+
+    function fmtInt(value) {
+      return Math.round(value).toLocaleString("en-US");
+    }
+
+    function fmtPct(value) {
+      return `${(value * 100).toFixed(1)}%`;
+    }
+
+    function centerToBlock(center, width) {
+      const start = clamp(Math.round(center - (width - 1) / 2), 0, CHANNELS - width);
+      return start;
+    }
+
+    function hitBlock(channel, start, width) {
+      return channel >= start && channel < start + width;
+    }
+
+    function blockCenter(start, width) {
+      return start + (width - 1) / 2;
+    }
+
+    function circularDistance(a, b) {
+      const diff = Math.abs(a - b);
+      return Math.min(diff, CHANNELS - diff);
+    }
+
+    function bestWindowFromWeights(weights, width) {
+      let bestStart = 0;
+      let bestScore = -Infinity;
+      for (let start = 0; start <= CHANNELS - width; start++) {
+        let score = 0;
+        for (let i = 0; i < width; i++) score += weights[start + i] || 0;
+        if (score > bestScore) {
+          bestScore = score;
+          bestStart = start;
+        }
+      }
+      return bestStart;
+    }
+
+    function shuffledRange(n, rng) {
+      const arr = Array.from({ length: n }, (_, i) => i);
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        const temp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = temp;
+      }
+      return arr;
+    }
+
+    function makeActiveSet(model, count, rng) {
+      if (model === "afhCluster") {
+        const span = count;
+        const start = Math.floor(rng() * (CHANNELS - span + 1));
+        return Array.from({ length: span }, (_, i) => start + i);
+      }
+
+      if (model === "stride") {
+        return Array.from({ length: CHANNELS }, (_, i) => i);
+      }
+
+      const picks = shuffledRange(CHANNELS, rng).slice(0, count);
+      picks.sort((a, b) => a - b);
+      return picks;
+    }
+
+    function generateHops(params) {
+      const rng = mulberry32(params.seed * 2654435761 + 17);
+      const hops = new Uint8Array(params.packets);
+      const active = makeActiveSet(params.hopModel, params.activeBins, rng);
+      const jitter = params.jitter / 100;
+
+      if (params.hopModel === "classic") {
+        let offset = 0;
+        while (offset < params.packets) {
+          const perm = shuffledRange(CHANNELS, rng);
+          for (let i = 0; i < perm.length && offset < params.packets; i++, offset++) {
+            hops[offset] = perm[i];
+          }
+        }
+        return { hops, active };
+      }
+
+      if (params.hopModel === "stride") {
+        const strideOptions = [5, 9, 12, 17, 23, 31, 37];
+        const stride = strideOptions[Math.floor(rng() * strideOptions.length)];
+        const phase = Math.floor(rng() * CHANNELS);
+        for (let t = 0; t < params.packets; t++) {
+          let ch = mod(phase + stride * t, CHANNELS);
+          if (rng() < jitter) ch = Math.floor(rng() * CHANNELS);
+          hops[t] = ch;
+        }
+        return { hops, active, stride, phase };
+      }
+
+      let idx = 0;
+      while (idx < params.packets) {
+        const perm = shuffledRange(active.length, rng);
+        for (let i = 0; i < perm.length && idx < params.packets; i++, idx++) {
+          let ch = active[perm[i]];
+          if (rng() < jitter) ch = Math.floor(rng() * CHANNELS);
+          hops[idx] = ch;
+        }
+      }
+      return { hops, active };
+    }
+
+    function generateObservations(hops, params, seedShift) {
+      const rng = mulberry32(params.seed * 1103515245 + seedShift);
+      const observations = new Int16Array(hops.length);
+      observations.fill(-1);
+
+      for (let t = 0; t < hops.length; t++) {
+        if (rng() > params.detectProb / 100) continue;
+        let observed = hops[t];
+        if (rng() < params.falseProb / 100) {
+          const offset = 1 + Math.floor(rng() * (CHANNELS - 1));
+          observed = (observed + offset) % CHANNELS;
+        }
+        observations[t] = observed;
+      }
+      return observations;
+    }
+
+    function makeRandomWindow(seed) {
+      const rng = mulberry32(seed * 7919 + 3);
+      return {
+        predict(targetT, width) {
+          return Math.floor(rng() * (CHANNELS - width + 1));
+        },
+        observe() {}
+      };
+    }
+
+    function makeSweepWindow() {
+      return {
+        predict(targetT, width) {
+          const windows = CHANNELS - width + 1;
+          return targetT % windows;
+        },
+        observe() {}
+      };
+    }
+
+    function makeLastFollower() {
+      let last = Math.floor(CHANNELS / 2);
+      return {
+        predict(targetT, width) {
+          return centerToBlock(last, width);
+        },
+        observe(t, obs) {
+          if (obs >= 0) last = obs;
+        }
+      };
+    }
+
+    function makeStrideEstimator() {
+      const scores = new Float32Array(CHANNELS);
+      let lastT = -1;
+      let lastCh = -1;
+      let bestStride = 1;
+      let anchorT = 0;
+      let anchorCh = Math.floor(CHANNELS / 2);
+
+      return {
+        predict(targetT, width) {
+          const center = mod(anchorCh + bestStride * (targetT - anchorT), CHANNELS);
+          return centerToBlock(center, width);
+        },
+        observe(t, obs) {
+          if (obs < 0) return;
+          if (lastT >= 0) {
+            const dt = t - lastT;
+            for (let stride = 0; stride < CHANNELS; stride++) {
+              const predicted = mod(lastCh + stride * dt, CHANNELS);
+              scores[stride] *= 0.999;
+              if (predicted === obs) scores[stride] += 1.8;
+              else if (circularDistance(predicted, obs) <= 1) scores[stride] += 0.2;
+            }
+            let bestScore = -Infinity;
+            for (let stride = 0; stride < CHANNELS; stride++) {
+              if (scores[stride] > bestScore) {
+                bestScore = scores[stride];
+                bestStride = stride;
+              }
+            }
+          }
+          lastT = t;
+          lastCh = obs;
+          anchorT = t;
+          anchorCh = obs;
+        }
+      };
+    }
+
+    function makeMarkovTracker() {
+      const counts = Array.from({ length: CHANNELS }, () => new Float32Array(CHANNELS));
+      const global = new Float32Array(CHANNELS);
+      let last = -1;
+      let current = Math.floor(CHANNELS / 2);
+
+      return {
+        predict(targetT, width) {
+          const row = counts[current];
+          let total = 0;
+          for (let i = 0; i < CHANNELS; i++) total += row[i];
+          if (total < 1) return bestWindowFromWeights(global, width);
+
+          const weights = new Float32Array(CHANNELS);
+          for (let i = 0; i < CHANNELS; i++) weights[i] = row[i] + 0.02 * global[i];
+          return bestWindowFromWeights(weights, width);
+        },
+        observe(t, obs) {
+          if (obs < 0) return;
+          global[obs] += 1;
+          if (last >= 0) counts[last][obs] += 1;
+          last = obs;
+          current = obs;
+        }
+      };
+    }
+
+    function makeActiveMapDensity() {
+      const weights = new Float32Array(CHANNELS);
+      for (let i = 0; i < CHANNELS; i++) weights[i] = 0.03;
+
+      return {
+        predict(targetT, width) {
+          return bestWindowFromWeights(weights, width);
+        },
+        observe(t, obs) {
+          if (t % 80 === 0) {
+            for (let i = 0; i < CHANNELS; i++) weights[i] *= 0.985;
+          }
+          if (obs >= 0) weights[obs] += 1;
+        },
+        weights
+      };
+    }
+
+    function makePhaseBank() {
+      const scores = new Float32Array(CHANNELS * CHANNELS);
+      let bestIdx = Math.floor(CHANNELS / 2) * CHANNELS + 1;
+      let observations = 0;
+
+      return {
+        confidence() {
+          return observations <= 0 ? 0 : scores[bestIdx] / observations;
+        },
+        predictCenter(targetT) {
+          const phase = Math.floor(bestIdx / CHANNELS);
+          const stride = bestIdx % CHANNELS;
+          return mod(phase + stride * targetT, CHANNELS);
+        },
+        observe(t, obs) {
+          if (obs < 0) return;
+          observations += 1;
+          let localBest = bestIdx;
+          let localBestScore = scores[bestIdx];
+          for (let stride = 0; stride < CHANNELS; stride++) {
+            const phase = mod(obs - stride * t, CHANNELS);
+            const idx = phase * CHANNELS + stride;
+            scores[idx] += 1;
+            if (scores[idx] > localBestScore) {
+              localBestScore = scores[idx];
+              localBest = idx;
+            }
+          }
+          bestIdx = localBest;
+        }
+      };
+    }
+
+    function makeHybridEstimator() {
+      const active = makeActiveMapDensity();
+      const bank = makePhaseBank();
+
+      return {
+        predict(targetT, width) {
+          if (bank.confidence() > 0.18) {
+            return centerToBlock(bank.predictCenter(targetT), width);
+          }
+          return active.predict(targetT, width);
+        },
+        observe(t, obs) {
+          active.observe(t, obs);
+          bank.observe(t, obs);
+        }
+      };
+    }
+
+    function parseParams() {
+      const maxBw = Number(els.maxBw.value);
+      const jamBw = Math.min(Number(els.jamBw.value), maxBw);
+      return {
+        hopModel: els.hopModel.value,
+        activeBins: Number(els.activeBins.value),
+        jitter: Number(els.jitter.value),
+        maxBw,
+        jamBw,
+        responseUs: Number(els.responseUs.value),
+        detectProb: Number(els.detectProb.value),
+        falseProb: Number(els.falseProb.value),
+        packets: Number(els.packets.value),
+        seed: clamp(Number(els.seed.value) || 1, 1, 999999)
+      };
+    }
+
+    function syncControls() {
+      const maxBw = Number(els.maxBw.value);
+      els.jamBw.max = String(maxBw);
+      if (Number(els.jamBw.value) > maxBw) els.jamBw.value = String(maxBw);
+
+      els.activeBinsOut.textContent = els.activeBins.value;
+      els.jitterOut.textContent = `${els.jitter.value}%`;
+      els.maxBwOut.textContent = `${els.maxBw.value} MHz`;
+      els.jamBwOut.textContent = `${els.jamBw.value} MHz`;
+      els.responseOut.textContent = `${els.responseUs.value} us`;
+      els.detectOut.textContent = `${els.detectProb.value}%`;
+      els.falseOut.textContent = `${els.falseProb.value}%`;
+      els.packetOut.textContent = Number(els.packets.value).toLocaleString("en-US");
+    }
+
+    function responseProfile(responseUs) {
+      const exact = responseUs / SLOT_US;
+      const offset = Math.floor(exact);
+      const phase = exact - offset;
+      const overlap = phase === 0 ? 1 : 1 - phase;
+      return { offset, overlap };
+    }
+
+    function runAlgorithm(def, hops, observations, params, responseUs, traceLimit) {
+      const width = params.jamBw;
+      const profile = responseProfile(responseUs);
+      const algo = def.make(params.seed + responseUs + def.id.length * 101);
+      const scheduledStart = new Int16Array(hops.length);
+      const scheduledOverlap = new Float32Array(hops.length);
+      scheduledStart.fill(-1);
+
+      let disrupted = 0;
+      let bandHits = 0;
+      let errorSum = 0;
+      let decisions = 0;
+      const trace = traceLimit ? [] : null;
+
+      for (let t = 0; t < hops.length; t++) {
+        if (scheduledStart[t] >= 0) {
+          const hit = hitBlock(hops[t], scheduledStart[t], width);
+          if (hit) disrupted += scheduledOverlap[t];
+          if (hit) bandHits += 1;
+          errorSum += circularDistance(hops[t], blockCenter(scheduledStart[t], width));
+          decisions += 1;
+          if (trace && trace.length < traceLimit) {
+            trace.push({ t, hop: hops[t], start: scheduledStart[t], hit, overlap: scheduledOverlap[t] });
+          }
+        }
+
+        const obs = observations[t];
+        algo.observe(t, obs);
+        const targetT = t + profile.offset;
+        if (targetT < hops.length) {
+          const start = algo.predict(targetT, width);
+          if (profile.offset === 0) {
+            const hit = hitBlock(hops[t], start, width);
+            if (hit) disrupted += profile.overlap;
+            if (hit) bandHits += 1;
+            errorSum += circularDistance(hops[t], blockCenter(start, width));
+            decisions += 1;
+            if (trace && trace.length < traceLimit) {
+              trace.push({ t, hop: hops[t], start, hit, overlap: profile.overlap });
+            }
+          } else {
+            scheduledStart[targetT] = start;
+            scheduledOverlap[targetT] = profile.overlap;
+          }
+        }
+      }
+
+      return {
+        id: def.id,
+        name: def.name,
+        use: def.use,
+        color: COLORS[def.id],
+        disrupted,
+        disruptedPackets: Math.round(disrupted),
+        rate: disrupted / hops.length,
+        bandHitRate: decisions ? bandHits / decisions : 0,
+        meanError: decisions ? errorSum / decisions : 0,
+        pass: disrupted / hops.length >= TARGET,
+        trace: trace || []
+      };
+    }
+
+    function runSimulation(params) {
+      const hopData = generateHops(params);
+      const observations = generateObservations(hopData.hops, params, 97);
+
+      const selectedResults = ALGO_DEFS.map(def =>
+        runAlgorithm(def, hopData.hops, observations, params, params.responseUs, 520)
+      ).sort((a, b) => b.rate - a.rate);
+
+      const sweepUs = buildSweepValues(params.responseUs);
+      const sweep = sweepUs.map(responseUs => {
+        const responseObservations = generateObservations(hopData.hops, params, 97);
+        const results = ALGO_DEFS.map(def =>
+          runAlgorithm(def, hopData.hops, responseObservations, params, responseUs, 0)
+        );
+        return { responseUs, results };
+      });
+
+      return { params, hopData, observations, selectedResults, sweep };
+    }
+
+    function buildSweepValues(selected) {
+      const values = new Set();
+      for (const us of [0, 625, 1250, 2500, 3750, 5000, 6000]) values.add(us);
+      values.add(selected);
+      return Array.from(values).sort((a, b) => a - b);
+    }
+
+    function renderSummary(result) {
+      const params = result.params;
+      const best = result.selectedResults[0];
+      const profile = responseProfile(params.responseUs);
+      const phaseUs = params.responseUs - profile.offset * SLOT_US;
+
+      els.bestAlgo.textContent = best.name.replace(" Estimator", "");
+      els.bestAlgoSub.textContent = `${fmtPct(best.rate)} at ${params.responseUs} us`;
+      els.bestPackets.textContent = fmtInt(best.disruptedPackets);
+      els.bestPacketsSub.textContent = `${fmtInt(Math.ceil(params.packets * TARGET))} needed for 36%`;
+      els.slotOffset.textContent = `${profile.offset} slot${profile.offset === 1 ? "" : "s"}`;
+      els.slotOffsetSub.textContent = `${Math.round(profile.overlap * 100)}% slot overlap after ${phaseUs} us`;
+      els.bandwidthMetric.textContent = `${params.jamBw} MHz`;
+      els.bandwidthSub.textContent = `Cap ${params.maxBw} MHz, ${CHANNELS} bins`;
+    }
+
+    function renderTable(result) {
+      const rows = result.selectedResults.map(row => {
+        const badge = row.pass
+          ? `<span class="pass-badge">Meets</span>`
+          : `<span class="miss-badge">Misses</span>`;
+        return `
+          <tr class="${row.pass ? "pass" : ""}">
+            <td><span class="algo-name"><span class="swatch" style="background:${row.color}"></span>${row.name}</span></td>
+            <td>${fmtInt(row.disruptedPackets)} / ${fmtInt(result.params.packets)}</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div class="bar-track"><div class="bar-fill" style="width:${Math.min(100, row.rate * 100).toFixed(2)}%;background:${row.color}"></div></div>
+                <strong>${fmtPct(row.rate)}</strong>
+              </div>
+            </td>
+            <td>${badge}</td>
+            <td>${fmtPct(row.bandHitRate)}</td>
+            <td>${row.meanError.toFixed(1)} bins</td>
+            <td>${row.use}</td>
+          </tr>
+        `;
+      }).join("");
+      els.resultsBody.innerHTML = rows;
+    }
+
+    function setupCanvas(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.round(rect.width * dpr));
+      canvas.height = Math.max(1, Math.round(rect.height * dpr));
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { ctx, w: rect.width, h: rect.height };
+    }
+
+    function drawResponseChart(result) {
+      const { ctx, w, h } = setupCanvas(els.responseChart);
+      ctx.clearRect(0, 0, w, h);
+      const pad = { l: 54, r: 16, t: 18, b: 42 };
+      const innerW = w - pad.l - pad.r;
+      const innerH = h - pad.t - pad.b;
+      const maxY = Math.max(0.5, ...result.sweep.flatMap(s => s.results.map(r => r.rate))) * 1.08;
+      const maxUs = Math.max(...result.sweep.map(s => s.responseUs));
+
+      ctx.fillStyle = "#fbfcfb";
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = "#d7dfda";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+
+      ctx.font = "12px Inter, Segoe UI, sans-serif";
+      ctx.fillStyle = "#60706a";
+      ctx.strokeStyle = "#e7ece8";
+      for (let i = 0; i <= 5; i++) {
+        const yValue = maxY * i / 5;
+        const y = pad.t + innerH - (yValue / maxY) * innerH;
+        ctx.beginPath();
+        ctx.moveTo(pad.l, y);
+        ctx.lineTo(w - pad.r, y);
+        ctx.stroke();
+        ctx.fillText(`${Math.round(yValue * 100)}%`, 8, y + 4);
+      }
+
+      const targetY = pad.t + innerH - (TARGET / maxY) * innerH;
+      ctx.strokeStyle = "#168067";
+      ctx.setLineDash([6, 5]);
+      ctx.beginPath();
+      ctx.moveTo(pad.l, targetY);
+      ctx.lineTo(w - pad.r, targetY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#168067";
+      ctx.fillText("36%", pad.l + 6, targetY - 6);
+
+      ctx.fillStyle = "#60706a";
+      for (let us = 0; us <= maxUs; us += 1250) {
+        const x = pad.l + (us / maxUs) * innerW;
+        ctx.fillText(`${us / 1000}s`, x - 11, h - 16);
+      }
+
+      for (const def of ALGO_DEFS) {
+        ctx.strokeStyle = COLORS[def.id];
+        ctx.lineWidth = def.id === result.selectedResults[0].id ? 3 : 1.8;
+        ctx.beginPath();
+        result.sweep.forEach((point, idx) => {
+          const item = point.results.find(r => r.id === def.id);
+          const x = pad.l + (point.responseUs / maxUs) * innerW;
+          const y = pad.t + innerH - (item.rate / maxY) * innerH;
+          if (idx === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      }
+
+      const selectedX = pad.l + (result.params.responseUs / maxUs) * innerW;
+      ctx.strokeStyle = "#17211d";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath();
+      ctx.moveTo(selectedX, pad.t);
+      ctx.lineTo(selectedX, pad.t + innerH);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      drawLegend(ctx, result.selectedResults, pad.l + 4, pad.t + 8, w - pad.r - 10);
+    }
+
+    function drawLegend(ctx, rows, x, y, maxX) {
+      ctx.font = "12px Inter, Segoe UI, sans-serif";
+      let cursorX = x;
+      let cursorY = y;
+      const ordered = [...rows].sort((a, b) => ALGO_DEFS.findIndex(d => d.id === a.id) - ALGO_DEFS.findIndex(d => d.id === b.id));
+      for (const row of ordered) {
+        const label = row.name;
+        const width = ctx.measureText(label).width + 28;
+        if (cursorX + width > maxX) {
+          cursorX = x;
+          cursorY += 20;
+        }
+        ctx.fillStyle = row.color;
+        ctx.fillRect(cursorX, cursorY - 9, 10, 10);
+        ctx.fillStyle = "#60706a";
+        ctx.fillText(label, cursorX + 15, cursorY);
+        cursorX += width;
+      }
+    }
+
+    function drawBandChart(result) {
+      const { ctx, w, h } = setupCanvas(els.bandChart);
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "#fbfcfb";
+      ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = "#d7dfda";
+      ctx.strokeRect(0.5, 0.5, w - 1, h - 1);
+
+      const best = result.selectedResults[0];
+      const trace = best.trace.slice(0, 420);
+      const pad = { l: 42, r: 14, t: 18, b: 34 };
+      const innerW = w - pad.l - pad.r;
+      const innerH = h - pad.t - pad.b;
+
+      ctx.font = "12px Inter, Segoe UI, sans-serif";
+      ctx.fillStyle = "#60706a";
+      ctx.strokeStyle = "#e7ece8";
+      for (let ch = 0; ch <= CHANNELS; ch += 10) {
+        const y = pad.t + innerH - (ch / CHANNELS) * innerH;
+        ctx.beginPath();
+        ctx.moveTo(pad.l, y);
+        ctx.lineTo(w - pad.r, y);
+        ctx.stroke();
+        ctx.fillText(`${FIRST_MHZ + ch}`, 6, y + 4);
+      }
+
+      const n = Math.max(1, trace.length);
+      for (let i = 0; i < trace.length; i++) {
+        const item = trace[i];
+        const x = pad.l + (i / Math.max(1, n - 1)) * innerW;
+        const yHop = pad.t + innerH - (item.hop / CHANNELS) * innerH;
+        const yTop = pad.t + innerH - ((item.start + result.params.jamBw) / CHANNELS) * innerH;
+        const yBottom = pad.t + innerH - (item.start / CHANNELS) * innerH;
+
+        ctx.fillStyle = item.hit ? "rgba(22, 128, 103, 0.24)" : "rgba(180, 107, 18, 0.16)";
+        ctx.fillRect(x - 1, yTop, Math.max(2, innerW / n), Math.max(1, yBottom - yTop));
+        ctx.fillStyle = item.hit ? "#168067" : "#b84035";
+        ctx.fillRect(x - 1.5, yHop - 1.5, 3, 3);
+      }
+
+      ctx.fillStyle = "#60706a";
+      ctx.fillText("MHz", 8, 14);
+      ctx.fillText("packets", w - 62, h - 12);
+      els.snapshotMeta.textContent = best.name;
+    }
+
+    function renderAll(result) {
+      renderSummary(result);
+      renderTable(result);
+      drawResponseChart(result);
+      drawBandChart(result);
+    }
+
+    function runNow() {
+      syncControls();
+      els.runStatus.textContent = "Running";
+      window.setTimeout(() => {
+        const params = parseParams();
+        latest = runSimulation(params);
+        renderAll(latest);
+        const best = latest.selectedResults[0];
+        els.runStatus.textContent = best.pass ? "36% reached" : "Below 36%";
+      }, 20);
+    }
+
+    function resetDefaults() {
+      els.hopModel.value = "afhCluster";
+      els.activeBins.value = "26";
+      els.jitter.value = "2";
+      els.maxBw.value = "10";
+      els.jamBw.value = "10";
+      els.responseUs.value = "1250";
+      els.detectProb.value = "90";
+      els.falseProb.value = "2";
+      els.packets.value = "12800";
+      els.seed.value = "402";
+      runNow();
+    }
+
+    for (const el of [
+      els.hopModel,
+      els.activeBins,
+      els.jitter,
+      els.maxBw,
+      els.jamBw,
+      els.responseUs,
+      els.detectProb,
+      els.falseProb,
+      els.packets,
+      els.seed
+    ]) {
+      el.addEventListener("input", syncControls);
+      el.addEventListener("change", runNow);
+    }
+
+    els.runBtn.addEventListener("click", runNow);
+    els.resetBtn.addEventListener("click", resetDefaults);
+    window.addEventListener("resize", () => {
+      if (latest) renderAll(latest);
+    });
+
+    syncControls();
+    runNow();
+  </script>
+</body>
+</html>
