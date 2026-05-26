@@ -10,6 +10,8 @@ Open `exact-hop-prediction.html` to run the theoretical upper-bound simulator fo
 
 Open `posterior-approximation.html` to compare practical real-time approximations to posterior majority voting, including a Jetson Nano-class particle tracker.
 
+Open `speech-packet-loss-player.html` to play `Blood Meridian - The Judge on War.mp3` through a real-time Bluetooth-style packet-loss simulator from 0% to 100%.
+
 The simulator models one Bluetooth connection over 79 one-MHz hop bins from 2.402 GHz to 2.480 GHz. The jammer can cover an adjustable contiguous bandwidth, with the default maximum set to 10 MHz. The target line is 36% disrupted packets.
 
 ## Adjustable Inputs

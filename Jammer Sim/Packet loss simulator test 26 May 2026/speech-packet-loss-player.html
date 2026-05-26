@@ -1,0 +1,919 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Speech Packet Loss Intelligibility Player</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f3;
+      --surface: #ffffff;
+      --surface-2: #edf2ee;
+      --ink: #17211d;
+      --muted: #61716b;
+      --border: #d7dfda;
+      --grid: #e6ece8;
+      --green: #168067;
+      --blue: #315f9d;
+      --amber: #b46b12;
+      --red: #b84035;
+      --shadow: 0 16px 42px rgba(23, 33, 29, 0.08);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      width: min(1360px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 22px 0 30px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 0 2px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.4rem, 2vw, 2.32rem);
+      line-height: 1.05;
+      letter-spacing: 0;
+      font-weight: 780;
+    }
+
+    .subtitle {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.96rem;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 38px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      color: var(--muted);
+      white-space: nowrap;
+      font-weight: 680;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--amber);
+    }
+
+    .dot.ready {
+      background: var(--green);
+    }
+
+    .dot.playing {
+      background: var(--blue);
+    }
+
+    .dot.error {
+      background: var(--red);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(285px, 345px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+      margin-top: 18px;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .controls {
+      position: sticky;
+      top: 14px;
+      padding: 14px;
+    }
+
+    .control-group {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .control-group:first-child {
+      padding-top: 0;
+    }
+
+    .control-group:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .group-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 10px;
+      color: var(--ink);
+      font-size: 0.78rem;
+      font-weight: 780;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+      margin: 12px 0;
+    }
+
+    .label-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    output {
+      color: var(--ink);
+      font-weight: 720;
+      white-space: nowrap;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--green);
+    }
+
+    select,
+    input[type="number"] {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: #fbfcfb;
+      color: var(--ink);
+      padding: 7px 9px;
+    }
+
+    .button-row {
+      display: grid;
+      grid-template-columns: 1fr 44px;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .run-button,
+    .ghost-button,
+    .tool-button {
+      min-height: 42px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-weight: 760;
+    }
+
+    .run-button {
+      background: var(--green);
+      color: #fff;
+      padding: 0 14px;
+    }
+
+    .run-button:disabled {
+      cursor: wait;
+      opacity: 0.72;
+    }
+
+    .ghost-button,
+    .tool-button {
+      background: var(--surface-2);
+      border-color: var(--border);
+      color: var(--ink);
+    }
+
+    .run-button:active,
+    .ghost-button:active,
+    .tool-button:active {
+      transform: translateY(1px);
+    }
+
+    .main {
+      display: grid;
+      gap: 18px;
+      min-width: 0;
+    }
+
+    .transport {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .track-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .time {
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      min-width: 54px;
+      text-align: center;
+    }
+
+    .playhead {
+      display: grid;
+      gap: 7px;
+    }
+
+    .filename {
+      color: var(--muted);
+      font-size: 0.92rem;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .meters {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .meter {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcfb;
+      min-width: 0;
+    }
+
+    .meter-label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 740;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .meter-value {
+      margin-top: 8px;
+      font-size: clamp(1.25rem, 2.1vw, 2rem);
+      font-weight: 780;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .visualizer {
+      padding: 16px;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 360px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: linear-gradient(#fbfcfb, #f8faf8);
+    }
+
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .tool-button {
+      min-height: 38px;
+      padding: 0 10px;
+    }
+
+    .file-input {
+      width: 100%;
+      min-height: 38px;
+      border: 1px dashed var(--border);
+      border-radius: 7px;
+      background: #fbfcfb;
+      color: var(--muted);
+      padding: 7px 9px;
+    }
+
+    @media (max-width: 900px) {
+      .topbar,
+      .track-row {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        position: static;
+      }
+
+      .meters,
+      .preset-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      canvas {
+        height: 280px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .app {
+        width: min(100vw - 20px, 1360px);
+        padding-top: 14px;
+      }
+
+      .meters,
+      .preset-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .track-row {
+        grid-template-columns: 1fr;
+      }
+
+      .time {
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div>
+        <h1>Speech Packet Loss Intelligibility Player</h1>
+        <div class="subtitle">Bluetooth-style packet dropout simulation for Blood Meridian - The Judge on War.mp3</div>
+      </div>
+      <div class="status-pill"><span class="dot" id="statusDot"></span><span id="statusText">Loading audio</span></div>
+    </header>
+
+    <div class="layout">
+      <aside class="panel controls">
+        <section class="control-group">
+          <div class="group-title"><span>Packet Loss</span><output id="lossOut">0%</output></div>
+          <div class="field">
+            <input id="lossRange" type="range" min="0" max="100" value="0" step="1">
+          </div>
+          <div class="preset-grid">
+            <button class="tool-button" data-loss="0">0%</button>
+            <button class="tool-button" data-loss="10">10%</button>
+            <button class="tool-button" data-loss="25">25%</button>
+            <button class="tool-button" data-loss="50">50%</button>
+          </div>
+        </section>
+
+        <section class="control-group">
+          <div class="group-title"><span>Packet Model</span></div>
+          <div class="field">
+            <div class="label-row"><label for="packetMs">Packet interval</label><output id="packetOut">20 ms</output></div>
+            <input id="packetMs" type="range" min="5" max="60" value="20" step="1">
+          </div>
+          <div class="field">
+            <div class="label-row"><label for="burstiness">Burstiness</label><output id="burstOut">0%</output></div>
+            <input id="burstiness" type="range" min="0" max="95" value="0" step="5">
+          </div>
+          <div class="field">
+            <div class="label-row"><label for="concealment">Concealment</label></div>
+            <select id="concealment">
+              <option value="silence">Silence</option>
+              <option value="hold">Hold last sample</option>
+              <option value="noise">Low noise floor</option>
+            </select>
+          </div>
+        </section>
+
+        <section class="control-group">
+          <div class="group-title"><span>Audio Source</span></div>
+          <div class="field">
+            <div class="label-row"><label for="fileInput">MP3 file</label></div>
+            <input class="file-input" id="fileInput" type="file" accept="audio/*">
+          </div>
+        </section>
+
+        <section class="control-group">
+          <div class="group-title"><span>Playback</span></div>
+          <div class="field">
+            <div class="label-row"><label for="volume">Volume</label><output id="volumeOut">90%</output></div>
+            <input id="volume" type="range" min="0" max="100" value="90" step="1">
+          </div>
+          <div class="button-row">
+            <button class="run-button" id="playButton" disabled>Play</button>
+            <button class="ghost-button" id="stopButton" title="Stop">Stop</button>
+          </div>
+        </section>
+      </aside>
+
+      <main class="main">
+        <section class="panel transport">
+          <div class="track-row">
+            <div class="time" id="elapsed">0:00</div>
+            <div class="playhead">
+              <input id="seek" type="range" min="0" max="1" value="0" step="0.001">
+              <div class="filename">Blood Meridian - The Judge on War.mp3</div>
+            </div>
+            <div class="time" id="duration">0:00</div>
+          </div>
+          <div class="meters">
+            <div class="meter">
+              <div class="meter-label">Packets heard</div>
+              <div class="meter-value" id="heardMeter">0</div>
+            </div>
+            <div class="meter">
+              <div class="meter-label">Packets lost</div>
+              <div class="meter-value" id="lostMeter">0</div>
+            </div>
+            <div class="meter">
+              <div class="meter-label">Measured loss</div>
+              <div class="meter-value" id="measuredMeter">0%</div>
+            </div>
+            <div class="meter">
+              <div class="meter-label">Longest gap</div>
+              <div class="meter-value" id="gapMeter">0 ms</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel visualizer">
+          <canvas id="scope" width="1200" height="360" aria-label="packet loss timeline"></canvas>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const audioFile = "Blood Meridian - The Judge on War.mp3";
+    const state = {
+      ctx: null,
+      node: null,
+      gain: null,
+      buffer: null,
+      isPlaying: false,
+      duration: 0,
+      position: 0,
+      packets: [],
+      packetStats: { heard: 0, lost: 0, longestGapMs: 0 },
+      statsTimer: null,
+      uiTimer: null,
+      drawTimer: null
+    };
+
+    const els = {
+      statusDot: document.getElementById("statusDot"),
+      statusText: document.getElementById("statusText"),
+      lossRange: document.getElementById("lossRange"),
+      lossOut: document.getElementById("lossOut"),
+      packetMs: document.getElementById("packetMs"),
+      packetOut: document.getElementById("packetOut"),
+      burstiness: document.getElementById("burstiness"),
+      burstOut: document.getElementById("burstOut"),
+      concealment: document.getElementById("concealment"),
+      volume: document.getElementById("volume"),
+      volumeOut: document.getElementById("volumeOut"),
+      fileInput: document.getElementById("fileInput"),
+      playButton: document.getElementById("playButton"),
+      stopButton: document.getElementById("stopButton"),
+      seek: document.getElementById("seek"),
+      elapsed: document.getElementById("elapsed"),
+      duration: document.getElementById("duration"),
+      heardMeter: document.getElementById("heardMeter"),
+      lostMeter: document.getElementById("lostMeter"),
+      measuredMeter: document.getElementById("measuredMeter"),
+      gapMeter: document.getElementById("gapMeter"),
+      scope: document.getElementById("scope")
+    };
+
+    const processorSource = `
+      class PacketLossProcessor extends AudioWorkletProcessor {
+        constructor() {
+          super();
+          this.channels = [];
+          this.sourceRate = sampleRate;
+          this.durationSamples = 0;
+          this.cursor = 0;
+          this.playing = false;
+          this.loss = 0;
+          this.packetMs = 20;
+          this.burstiness = 0;
+          this.concealment = "silence";
+          this.packetSamples = Math.max(1, Math.round(sampleRate * 0.02));
+          this.packetIndex = -1;
+          this.packetLost = false;
+          this.previousLost = false;
+          this.seed = 0x4d3c2b1a;
+          this.heard = 0;
+          this.lost = 0;
+          this.currentGap = 0;
+          this.longestGap = 0;
+          this.lastSample = [];
+          this.noiseSeed = 0x12345678;
+          this.port.onmessage = (event) => this.handle(event.data);
+        }
+
+        handle(data) {
+          if (data.type === "load") {
+            this.channels = data.channels;
+            this.sourceRate = data.sourceRate;
+            this.durationSamples = this.channels[0]?.length || 0;
+            this.cursor = 0;
+            this.resetPackets();
+          }
+          if (data.type === "play") this.playing = true;
+          if (data.type === "pause") this.playing = false;
+          if (data.type === "stop") {
+            this.playing = false;
+            this.cursor = 0;
+            this.resetPackets();
+          }
+          if (data.type === "seek") {
+            this.cursor = Math.max(0, Math.min(this.durationSamples - 1, Math.round(data.position * this.sourceRate)));
+            this.resetPackets();
+          }
+          if (data.type === "params") {
+            this.loss = data.loss;
+            this.packetMs = data.packetMs;
+            this.burstiness = data.burstiness;
+            this.concealment = data.concealment;
+            this.packetSamples = Math.max(1, Math.round(this.sourceRate * this.packetMs / 1000));
+          }
+          if (data.type === "stats") {
+            this.port.postMessage({
+              type: "stats",
+              heard: this.heard,
+              lost: this.lost,
+              position: this.cursor / this.sourceRate,
+              longestGapMs: this.longestGap * this.packetMs
+            });
+          }
+        }
+
+        resetPackets() {
+          this.packetIndex = -1;
+          this.packetLost = false;
+          this.previousLost = false;
+          this.heard = 0;
+          this.lost = 0;
+          this.currentGap = 0;
+          this.longestGap = 0;
+        }
+
+        random() {
+          this.seed = (1664525 * this.seed + 1013904223) >>> 0;
+          return this.seed / 4294967296;
+        }
+
+        noise() {
+          this.noiseSeed = (1103515245 * this.noiseSeed + 12345) >>> 0;
+          return ((this.noiseSeed / 4294967296) * 2 - 1) * 0.012;
+        }
+
+        choosePacket() {
+          const baseLoss = this.loss;
+          const sticky = this.burstiness;
+          let probability = baseLoss;
+          if (this.previousLost) probability = sticky + (1 - sticky) * baseLoss;
+          else probability = (1 - sticky) * baseLoss;
+          this.packetLost = this.random() < probability;
+          this.previousLost = this.packetLost;
+          if (this.packetLost) {
+            this.lost++;
+            this.currentGap++;
+            this.longestGap = Math.max(this.longestGap, this.currentGap);
+          } else {
+            this.heard++;
+            this.currentGap = 0;
+          }
+          this.port.postMessage({ type: "packet", lost: this.packetLost });
+        }
+
+        process(_inputs, outputs) {
+          const output = outputs[0];
+          if (!this.channels.length) return true;
+
+          for (let i = 0; i < output[0].length; i++) {
+            if (!this.playing) {
+              for (let ch = 0; ch < output.length; ch++) output[ch][i] = 0;
+              continue;
+            }
+
+            if (this.cursor >= this.durationSamples) {
+              this.playing = false;
+              this.port.postMessage({ type: "ended" });
+              for (let ch = 0; ch < output.length; ch++) output[ch][i] = 0;
+              continue;
+            }
+
+            const currentPacket = Math.floor(this.cursor / this.packetSamples);
+            if (currentPacket !== this.packetIndex) {
+              this.packetIndex = currentPacket;
+              this.choosePacket();
+            }
+
+            for (let ch = 0; ch < output.length; ch++) {
+              const source = this.channels[Math.min(ch, this.channels.length - 1)];
+              const sample = source[this.cursor] || 0;
+              if (this.packetLost) {
+                if (this.concealment === "hold") output[ch][i] = this.lastSample[ch] || 0;
+                else if (this.concealment === "noise") output[ch][i] = this.noise();
+                else output[ch][i] = 0;
+              } else {
+                output[ch][i] = sample;
+                this.lastSample[ch] = sample;
+              }
+            }
+            this.cursor++;
+          }
+          return true;
+        }
+      }
+
+      registerProcessor("packet-loss-processor", PacketLossProcessor);
+    `;
+
+    function setStatus(text, mode) {
+      els.statusText.textContent = text;
+      els.statusDot.className = "dot" + (mode ? ` ${mode}` : "");
+    }
+
+    function formatTime(seconds) {
+      if (!Number.isFinite(seconds)) return "0:00";
+      const whole = Math.max(0, Math.floor(seconds));
+      const mins = Math.floor(whole / 60);
+      const secs = String(whole % 60).padStart(2, "0");
+      return `${mins}:${secs}`;
+    }
+
+    function updateParams() {
+      const loss = Number(els.lossRange.value) / 100;
+      const packetMs = Number(els.packetMs.value);
+      const burstiness = Number(els.burstiness.value) / 100;
+      els.lossOut.textContent = `${els.lossRange.value}%`;
+      els.packetOut.textContent = `${packetMs} ms`;
+      els.burstOut.textContent = `${els.burstiness.value}%`;
+      els.volumeOut.textContent = `${els.volume.value}%`;
+      if (state.gain) state.gain.gain.value = Number(els.volume.value) / 100;
+      if (state.node) {
+        state.node.port.postMessage({
+          type: "params",
+          loss,
+          packetMs,
+          burstiness,
+          concealment: els.concealment.value
+        });
+      }
+    }
+
+    function draw() {
+      const canvas = els.scope;
+      const ctx = canvas.getContext("2d");
+      const width = canvas.width;
+      const height = canvas.height;
+      ctx.clearRect(0, 0, width, height);
+
+      ctx.fillStyle = "#fbfcfb";
+      ctx.fillRect(0, 0, width, height);
+      ctx.strokeStyle = "#e6ece8";
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= width; x += width / 12) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= height; y += height / 4) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+
+      const packetCount = state.packets.length;
+      const maxPackets = 320;
+      const start = Math.max(0, packetCount - maxPackets);
+      const shown = state.packets.slice(start);
+      const barWidth = width / maxPackets;
+      shown.forEach((lost, index) => {
+        const x = index * barWidth;
+        ctx.fillStyle = lost ? "#b84035" : "#168067";
+        ctx.fillRect(x, lost ? height * 0.18 : height * 0.52, Math.max(1, barWidth - 1), lost ? height * 0.64 : height * 0.3);
+      });
+
+      ctx.fillStyle = "#61716b";
+      ctx.font = "13px Inter, system-ui, sans-serif";
+      ctx.fillText("recent packets", 14, 24);
+      ctx.fillStyle = "#168067";
+      ctx.fillRect(14, 36, 18, 8);
+      ctx.fillStyle = "#61716b";
+      ctx.fillText("received", 38, 43);
+      ctx.fillStyle = "#b84035";
+      ctx.fillRect(124, 36, 18, 8);
+      ctx.fillStyle = "#61716b";
+      ctx.fillText("lost", 148, 43);
+    }
+
+    function updateMeters(stats) {
+      const total = stats.heard + stats.lost;
+      const measured = total ? Math.round((stats.lost / total) * 100) : 0;
+      els.heardMeter.textContent = stats.heard;
+      els.lostMeter.textContent = stats.lost;
+      els.measuredMeter.textContent = `${measured}%`;
+      els.gapMeter.textContent = `${Math.round(stats.longestGapMs)} ms`;
+      state.position = stats.position;
+      els.elapsed.textContent = formatTime(state.position);
+      if (!els.seek.matches(":active") && state.duration > 0) {
+        els.seek.value = String(state.position / state.duration);
+      }
+    }
+
+    async function ensureAudioEngine() {
+      if (state.ctx && state.node) return;
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      state.ctx = new AudioContextClass();
+      const processorUrl = URL.createObjectURL(new Blob([processorSource], { type: "application/javascript" }));
+      await state.ctx.audioWorklet.addModule(processorUrl);
+      URL.revokeObjectURL(processorUrl);
+    }
+
+    function resetTransport() {
+      state.isPlaying = false;
+      state.position = 0;
+      state.packets = [];
+      els.seek.value = "0";
+      els.elapsed.textContent = "0:00";
+      els.playButton.textContent = "Play";
+      els.heardMeter.textContent = "0";
+      els.lostMeter.textContent = "0";
+      els.measuredMeter.textContent = "0%";
+      els.gapMeter.textContent = "0 ms";
+    }
+
+    function loadDecodedBuffer(buffer) {
+      if (state.node) {
+        state.node.disconnect();
+      }
+
+      state.buffer = buffer;
+      state.duration = state.buffer.duration;
+      state.node = new AudioWorkletNode(state.ctx, "packet-loss-processor", {
+        numberOfOutputs: 1,
+        outputChannelCount: [state.buffer.numberOfChannels]
+      });
+      state.gain = state.ctx.createGain();
+      state.node.connect(state.gain).connect(state.ctx.destination);
+      state.node.port.postMessage({
+        type: "load",
+        sourceRate: state.buffer.sampleRate,
+        channels: Array.from({ length: state.buffer.numberOfChannels }, (_, ch) => state.buffer.getChannelData(ch))
+      });
+
+      state.node.port.onmessage = (event) => {
+        const data = event.data;
+        if (data.type === "packet") {
+          state.packets.push(data.lost);
+          if (state.packets.length > 400) state.packets.shift();
+        }
+        if (data.type === "stats") updateMeters(data);
+        if (data.type === "ended") stopPlayback(false);
+      };
+
+      resetTransport();
+      els.duration.textContent = formatTime(state.duration);
+      els.playButton.disabled = false;
+      setStatus("Ready", "ready");
+      updateParams();
+    }
+
+    async function loadArrayBuffer(arrayBuffer) {
+      await ensureAudioEngine();
+      const decoded = await state.ctx.decodeAudioData(arrayBuffer);
+      loadDecodedBuffer(decoded);
+    }
+
+    async function loadSelectedFile(file) {
+      if (!file) return;
+      try {
+        setStatus("Loading selected MP3", "");
+        els.playButton.disabled = true;
+        await loadArrayBuffer(await file.arrayBuffer());
+      } catch (error) {
+        console.error(error);
+        setStatus("Could not decode file", "error");
+      }
+    }
+
+    async function initAudio() {
+      if (window.location.protocol === "file:") {
+        setStatus("Choose MP3 file", "ready");
+        return;
+      }
+
+      try {
+        const response = await fetch(audioFile);
+        if (!response.ok) throw new Error(`Could not load ${audioFile}`);
+        await loadArrayBuffer(await response.arrayBuffer());
+      } catch (error) {
+        console.error(error);
+        setStatus("Choose MP3 file", "error");
+      }
+    }
+
+    async function playPause() {
+      if (!state.node) return;
+      await state.ctx.resume();
+      state.isPlaying = !state.isPlaying;
+      state.node.port.postMessage({ type: state.isPlaying ? "play" : "pause" });
+      els.playButton.textContent = state.isPlaying ? "Pause" : "Play";
+      setStatus(state.isPlaying ? "Playing" : "Paused", state.isPlaying ? "playing" : "ready");
+    }
+
+    function stopPlayback(resetPosition = true) {
+      if (!state.node) return;
+      state.isPlaying = false;
+      els.playButton.textContent = "Play";
+      setStatus("Ready", "ready");
+      if (resetPosition) {
+        state.node.port.postMessage({ type: "stop" });
+        state.position = 0;
+        els.seek.value = "0";
+        els.elapsed.textContent = "0:00";
+      } else {
+        state.node.port.postMessage({ type: "pause" });
+      }
+    }
+
+    function seekToFraction(fraction) {
+      if (!state.node || !state.duration) return;
+      const bounded = Math.max(0, Math.min(1, fraction));
+      state.node.port.postMessage({ type: "seek", position: bounded * state.duration });
+      state.position = bounded * state.duration;
+      state.packets = [];
+      els.elapsed.textContent = formatTime(state.position);
+    }
+
+    [els.lossRange, els.packetMs, els.burstiness, els.concealment, els.volume].forEach((el) => {
+      el.addEventListener("input", updateParams);
+      el.addEventListener("change", updateParams);
+    });
+
+    document.querySelectorAll("[data-loss]").forEach((button) => {
+      button.addEventListener("click", () => {
+        els.lossRange.value = button.dataset.loss;
+        updateParams();
+      });
+    });
+
+    els.playButton.addEventListener("click", playPause);
+    els.stopButton.addEventListener("click", () => stopPlayback(true));
+    els.seek.addEventListener("input", () => seekToFraction(Number(els.seek.value)));
+    els.fileInput.addEventListener("change", () => loadSelectedFile(els.fileInput.files[0]));
+
+    state.statsTimer = setInterval(() => {
+      if (state.node) state.node.port.postMessage({ type: "stats" });
+    }, 180);
+    state.drawTimer = setInterval(draw, 120);
+
+    draw();
+    initAudio();
+  </script>
+</body>
+</html>
