@@ -3,8 +3,14 @@ function est = estimateDeployment(cfg, numFeatures)
 
 arguments
     cfg (1,1) struct
-    numFeatures (1,1) double {mustBeInteger, mustBePositive} = estimateFeatureCount(cfg)
+    numFeatures = []
 end
+
+if isempty(numFeatures)
+    numFeatures = estimateFeatureCount(cfg);
+end
+validateattributes(numFeatures, {'double', 'single'}, {'scalar', 'integer', 'positive'}, mfilename, 'numFeatures');
+numFeatures = double(numFeatures);
 
 cost = btHopPredictor.estimateModelCost(cfg, numFeatures, 79);
 
@@ -64,4 +70,3 @@ if isfield(cfg, "FeatureMode") && strcmpi(string(cfg.FeatureMode), "oracleFeatur
     n = n + 28 + 24;
 end
 end
-

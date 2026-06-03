@@ -23,5 +23,4 @@ data = btHopPredictor.generateDataset(cfg);
 metrics = btHopPredictor.evaluateModel(loaded.net, testData, cfg);
 
 disp(metrics)
-btHopPredictor.saveResults("eval_" + string(datestr(now, "yyyymmdd_HHMMSS")), cfg, metrics);
-
+btHopPredictor.saveResults("eval_" + string(datestr(now, 'yyyymmdd_HHMMSS')), cfg, metrics);

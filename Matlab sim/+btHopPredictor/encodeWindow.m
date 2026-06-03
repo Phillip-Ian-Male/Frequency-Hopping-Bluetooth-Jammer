@@ -98,17 +98,16 @@ end
 
 function bits = lowerAddressBits(address, numBits)
 address = upper(char(address));
-address = regexprep(address, "[^0-9A-F]", "");
+address = regexprep(address, '[^0-9A-F]', '');
 if isempty(address)
-    address = "0";
+    address = '0';
 end
 
 numHex = ceil(numBits / 4);
 if numel(address) < numHex
-    address = [repmat("0", 1, numHex - numel(address)), address];
+    address = [repmat('0', 1, numHex - numel(address)), address];
 end
 
-address = char(address);
 hexPart = address((end - numHex + 1):end);
 value = uint32(hex2dec(hexPart));
 
@@ -117,4 +116,3 @@ for bitIdx = 1:numBits
     bits(bitIdx) = single(bitget(value, bitIdx));
 end
 end
-

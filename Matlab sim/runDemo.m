@@ -1,7 +1,7 @@
 function runDemo
 %RUNDEMO Run a small end-to-end hop-prediction simulation.
 
-rootDir = fileparts(mfilename("fullpath"));
+rootDir = fileparts(mfilename('fullpath'));
 addpath(rootDir);
 addpath(fullfile(rootDir, "scripts"));
 
@@ -29,4 +29,3 @@ fprintf("%s\n", est.Recommendation);
 
 btHopPredictor.saveResults("demo", cfg, metrics, modelInfo, trainInfo);
 end
-

@@ -14,11 +14,11 @@ cfgWaveform = bluetoothWaveformConfig;
 cfgWaveform.PacketType = char(opts.PacketType);
 cfgWaveform.Mode = char(opts.Mode);
 
-if isprop(cfgWaveform, "DeviceAddress")
+if isprop(cfgWaveform, 'DeviceAddress')
     cfgWaveform.DeviceAddress = char(opts.DeviceAddress);
 end
 
-if isprop(cfgWaveform, "SamplesPerSymbol")
+if isprop(cfgWaveform, 'SamplesPerSymbol')
     cfgWaveform.SamplesPerSymbol = opts.SamplesPerSymbol;
 end
 
@@ -38,4 +38,3 @@ burst.CenterFrequencyMHz = btHopPredictor.channelToFrequencyMHz(channelIndex);
 burst.SampleRate = opts.SamplesPerSymbol * 1e6;
 burst.DataBits = dataBits;
 end
-

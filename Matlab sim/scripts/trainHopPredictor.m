@@ -23,7 +23,7 @@ if ~isfolder(cfg.ModelDir)
     mkdir(cfg.ModelDir);
 end
 
-stamp = datestr(now, "yyyymmdd_HHMMSS");
+stamp = datestr(now, 'yyyymmdd_HHMMSS');
 modelPath = fullfile(cfg.ModelDir, "hopPredictor_" + string(stamp) + ".mat");
 save(modelPath, "net", "cfg", "metrics", "modelInfo", "trainInfo", "-v7.3");
 
@@ -31,4 +31,3 @@ btHopPredictor.saveResults("train_" + string(stamp), cfg, metrics, modelInfo, tr
 
 fprintf("Saved model: %s\n", modelPath);
 disp(metrics)
-

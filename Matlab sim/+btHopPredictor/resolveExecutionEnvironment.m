@@ -32,7 +32,7 @@ end
 function tf = hasGPU()
 tf = false;
 try
-    if exist("gpuDeviceCount", "file") == 2 && gpuDeviceCount > 0
+    if exist("gpuDeviceCount", "file") == 2 && gpuDeviceCount() > 0
         gpuDevice(1);
         tf = true;
     end
@@ -40,4 +40,3 @@ catch
     tf = false;
 end
 end
-

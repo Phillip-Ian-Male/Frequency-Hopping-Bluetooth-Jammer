@@ -5,17 +5,16 @@ arguments
     tag (1,1) string
     cfg (1,1) struct
     metrics (1,1) struct
-    modelInfo (1,1) struct = struct
-    trainInfo (1,1) struct = struct
+    modelInfo (1,1) struct = struct()
+    trainInfo (1,1) struct = struct()
 end
 
 if ~isfolder(cfg.ResultDir)
     mkdir(cfg.ResultDir);
 end
 
-safeTag = regexprep(char(tag), "[^A-Za-z0-9_=-]", "_");
-resultPath = fullfile(cfg.ResultDir, safeTag + ".mat");
+safeTag = regexprep(char(tag), '[^A-Za-z0-9_=-]', '_');
+resultPath = fullfile(cfg.ResultDir, string(safeTag) + ".mat");
 save(resultPath, "cfg", "metrics", "modelInfo", "trainInfo");
-fprintf("Saved results: %s\n", resultPath);
+fprintf("Saved results: %s\n", char(resultPath));
 end
-

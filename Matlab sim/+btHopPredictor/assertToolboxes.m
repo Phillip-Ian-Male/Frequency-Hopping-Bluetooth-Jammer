@@ -22,7 +22,8 @@ if exist("trainNetwork", "file") ~= 2
 end
 
 if ~isempty(missing)
-    error("Missing required MATLAB capability:\n  - %s", strjoin(missing, newline + "  - "));
+    separator = sprintf('\n  - ');
+    error("Missing required MATLAB capability:\n  - %s", strjoin(missing, separator));
 end
 
 if isfield(cfg, "UseGPU") && any(strcmpi(string(cfg.UseGPU), ["gpu", "true"]))
@@ -32,4 +33,3 @@ if isfield(cfg, "UseGPU") && any(strcmpi(string(cfg.UseGPU), ["gpu", "true"]))
     end
 end
 end
-

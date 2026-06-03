@@ -55,6 +55,15 @@ benchmarkInference
 The training script saves `.mat` files under `models/`. Result summaries are
 saved under `results/`.
 
+## Troubleshooting
+
+If MATLAB reports `Unable to resolve the name
+'wnet.internal.validateHexOctets'` while setting
+`bluetoothFrequencyHop.DeviceAddress`, run `startup` again from this folder.
+This package includes a small compatibility shim at
+`+wnet/+internal/validateHexOctets.m` for MATLAB installations where the
+Bluetooth Toolbox class is present but that internal validator is missing.
+
 ## Model Modes
 
 `cfg.FeatureMode = "sequenceOnly"` is the default and uses only simulated
@@ -101,4 +110,3 @@ The short version: a deterministic hop-kernel implementation is light enough for
 a Rock 5B if the required state is available. A heavy recurrent ML predictor,
 especially one trained with the RTX 4070 preset, should be planned around a
 Jetson Orin Nano or a smaller quantized model. See `DEPLOYMENT_ESTIMATE.md`.
-
